@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/* Sabaq looks like a ruled notebook page: pale paper, ballpoint-blue ink,
+   a red margin line, and a yellow highlighter for the one thing that matters. */
+@theme {
+  --color-paper: #f3f6f4;
+  --color-sheet: #fdfefd;
+  --color-ink: #14213d;
+  --color-ink-soft: #55627c;
+  --color-rule: #c5d3e4;
+  --color-margin: #e0616f;
+  --color-hi: #ffe45c;
+  --color-ok: #1c7c4e;
+
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+/* A highlighter stroke behind text, slightly uneven like a real one. */
+.hi {
+  background: linear-gradient(
+    178deg,
+    transparent 12%,
+    var(--color-hi) 12%,
+    var(--color-hi) 88%,
+    transparent 88%
+  );
+  padding-inline: 0.15em;
+  margin-inline: -0.15em;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* The page: a sheet with the red margin line down its left side. */
+.sheet {
+  background: var(--color-sheet);
+  border: 1px solid var(--color-rule);
+  border-radius: 4px;
+  position: relative;
+}
+.sheet::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--margin-x);
+  width: 2px;
+  background: var(--color-margin);
+  pointer-events: none;
+}
+.sheet {
+  --margin-x: 1rem;
+}
+@media (min-width: 640px) {
+  .sheet {
+    --margin-x: 6.5rem;
+  }
+}
+
+/* One ruled line. The first column sits in the margin on wide screens. */
+.line {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem 1.5rem;
+  padding: 0.85rem 1rem 0.85rem 2rem;
+  border-bottom: 1px solid var(--color-rule);
+}
+.line:last-child {
+  border-bottom: 0;
+}
+@media (min-width: 640px) {
+  .line {
+    grid-template-columns: 5rem 1fr;
+    padding: 0.85rem 1.5rem 0.85rem 0.75rem;
+    align-items: baseline;
+  }
+  .line > .in-margin {
+    text-align: right;
+  }
+}
+
+.field {
+  width: 100%;
+  background: var(--color-sheet);
+  border: 1px solid var(--color-ink-soft);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  color: var(--color-ink);
+}
+.field::placeholder {
+  color: var(--color-ink-soft);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: var(--color-ink);
+  color: var(--color-sheet);
+  border: 1px solid var(--color-ink);
+  border-radius: 4px;
+  padding: 0.6rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover {
+  background: #1f3260;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-quiet {
+  background: transparent;
+  color: var(--color-ink);
+}
+.btn-quiet:hover {
+  background: var(--color-paper);
+}
