@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: course ? `${course.code} ${course.title}` : "Course" };
 }
 
-export default async function CoursePage({ params, searchParams }: Props) {
+export default async function CourseFilesPage({ params, searchParams }: Props) {
   const [{ uni, code }, query] = await Promise.all([params, searchParams]);
   const course = await getCourse(uni, code);
   if (!course) notFound();
@@ -37,20 +37,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
 
   return (
     <>
-      <p className="pt-4 text-sm text-ink-soft">
-        <Link href="/" className="underline">
-          Courses
-        </Link>{" "}
-        / {course.university_name} / Semester {course.semester}
-      </p>
-      <h1 className="mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-        {course.title}
-      </h1>
-      <p className="mt-2 text-lg font-semibold tabular-nums text-ink-soft">
-        {course.code}
-      </p>
-
-      <div className="mb-4 mt-8 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Filter by kind" className="flex flex-wrap gap-1 text-sm">
           {filters.map((filter) => {
             const active = filter.value === type;

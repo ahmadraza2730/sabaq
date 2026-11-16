@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s | Sabaq",
   },
   description:
-    "Notes, past papers and assignments shared by university students, sorted by course.",
+    "Notes, past papers, course discussions and team finder for university students in Pakistan.",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -41,7 +41,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </Link>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-medium">
             <Link href="/" className="hover:underline">
-              Courses
+              Universities
+            </Link>
+            <Link href="/teams" className="hover:underline">
+              Teams
             </Link>
             <Link href="/upload" className="hover:underline">
               Upload

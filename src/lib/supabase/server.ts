@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { isConfigured, supabaseKey, supabaseUrl } from "@/lib/config";
 import type { Profile } from "@/lib/types";
 
@@ -24,12 +25,16 @@ export async function createClient() {
   });
 }
 
-/** The signed-in student and their profile, or null. */
-export async function getSession(): Promise<{
+export type Session = {
   userId: string;
   email: string;
   profile: Profile;
-} | null> {
+  /** Slug of the university the student picked on their profile, if any. */
+  universitySlug: string | null;
+};
+
+/** The signed-in student and their profile, or null. Cached per request. */
+export const getSession = cache(async (): Promise<Session | null> => {
   if (!isConfigured) return null;
   const supabase = await createClient();
   const {
@@ -39,16 +44,30 @@ export async function getSession(): Promise<{
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, batch, campus_id, role")
+    .select("id, full_name, batch, campus_id, role, campuses(universities(slug))")
     .eq("id", user.id)
     .maybeSingle();
 
-  const profile: Profile = (data as Profile | null) ?? {
-    id: user.id,
-    full_name: "",
-    batch: null,
-    campus_id: null,
-    role: "student",
+  const row = data as
+    | (Profile & {
+        campuses: { universities: { slug: string } | null } | null;
+      })
+    | null;
+
+  const profile: Profile = row
+    ? {
+        id: row.id,
+        full_name: row.full_name,
+        batch: row.batch,
+        campus_id: row.campus_id,
+        role: row.role,
+      }
+    : { id: user.id, full_name: "", batch: null, campus_id: null, role: "student" };
+
+  return {
+    userId: user.id,
+    email: user.email ?? "",
+    profile,
+    universitySlug: row?.campuses?.universities?.slug ?? null,
   };
-  return { userId: user.id, email: user.email ?? "", profile };
-}
+});

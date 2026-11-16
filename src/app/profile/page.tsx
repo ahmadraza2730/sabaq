@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { listMyUploads } from "@/lib/data";
+import { updateProfile } from "@/app/actions";
+import { ErrorNote, one } from "@/components/ErrorNote";
+import { listCampuses, listMyUploads } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
-import { TYPE_LABELS, type ResourceStatus } from "@/lib/types";
+import { TYPE_LABELS, type Campus, type ResourceStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your profile" };
@@ -14,14 +16,27 @@ const STATUS_TEXT: Record<ResourceStatus, string> = {
   rejected: "Not approved",
 };
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: PageProps<"/profile">) {
+  const query = await searchParams;
   const session = await getSession();
   if (!session) redirect("/login?next=/profile");
 
-  const uploads = await listMyUploads(session.userId);
+  const [uploads, campuses] = await Promise.all([
+    listMyUploads(session.userId),
+    listCampuses(),
+  ]);
   const approved = uploads.filter((u) => u.status === "approved");
   const downloads = approved.reduce((sum, u) => sum + u.downloads, 0);
   const upvotes = approved.reduce((sum, u) => sum + u.votes, 0);
+
+  const byUniversity = new Map<string, Campus[]>();
+  for (const campus of campuses) {
+    const list = byUniversity.get(campus.university_short_name) ?? [];
+    list.push(campus);
+    byUniversity.set(campus.university_short_name, list);
+  }
 
   return (
     <>
@@ -84,6 +99,66 @@ export default async function ProfilePage() {
           </li>
         ))}
       </ul>
+
+      <section className="mt-12 max-w-xl">
+        <h2 className="font-display text-xl font-bold">Your details</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Your campus decides which university the site opens on for you.
+        </p>
+        <ErrorNote message={one(query.error)} />
+        {one(query.saved) && (
+          <p role="status" className="my-4 rounded bg-hi p-3 text-sm font-medium">
+            Saved.
+          </p>
+        )}
+        <form action={updateProfile} className="mt-3 grid gap-4">
+          <label className="grid gap-1 text-sm font-medium">
+            Full name
+            <input
+              name="full_name"
+              required
+              minLength={2}
+              maxLength={80}
+              defaultValue={session.profile.full_name}
+              className="field"
+            />
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-medium">
+              Batch
+              <input
+                name="batch"
+                maxLength={20}
+                defaultValue={session.profile.batch ?? ""}
+                placeholder="Such as 2025"
+                className="field"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Campus
+              <select
+                name="campus_id"
+                defaultValue={session.profile.campus_id ?? ""}
+                className="field"
+              >
+                <option value="">Not set</option>
+                {[...byUniversity.entries()].map(([name, list]) => (
+                  <optgroup key={name} label={name}>
+                    {list.map((campus) => (
+                      <option key={campus.id} value={campus.id}>
+                        {name} {campus.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div>
+            <button className="btn">Save details</button>
+          </div>
+        </form>
+      </section>
     </>
   );
 }

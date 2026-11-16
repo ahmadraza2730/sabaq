@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { one } from "@/components/ErrorNote";
 import { UploadForm } from "@/components/UploadForm";
-import { isConfigured } from "@/lib/config";
-import { listCourses } from "@/lib/data";
+import { DEFAULT_UNIVERSITY, isConfigured } from "@/lib/config";
+import { getCourseById, listCourses, listUniversities } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Upload a file" };
@@ -11,7 +13,7 @@ export default async function UploadPage({
   searchParams,
 }: PageProps<"/upload">) {
   const params = await searchParams;
-  const preselected = typeof params.course === "string" ? params.course : "";
+  const preselected = one(params.course);
 
   const session = await getSession();
   if (isConfigured && !session) {
@@ -19,7 +21,16 @@ export default async function UploadPage({
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
 
-  const courses = await listCourses();
+  // Which university's courses to list: the chosen course's, the one in
+  // the link, the student's own, then the default.
+  const course = preselected ? await getCourseById(preselected) : null;
+  const universities = await listUniversities();
+  const uniSlug =
+    course?.university_slug ||
+    universities.find((u) => u.slug === one(params.uni))?.slug ||
+    session?.universitySlug ||
+    DEFAULT_UNIVERSITY;
+  const courses = await listCourses("", uniSlug);
 
   return (
     <div className="mx-auto max-w-xl pt-8">
@@ -32,15 +43,41 @@ export default async function UploadPage({
         page.
       </p>
 
+      <nav aria-label="University" className="mt-6 flex flex-wrap gap-1 text-sm">
+        {universities.map((u) => (
+          <Link
+            key={u.id}
+            href={`/upload?uni=${u.slug}`}
+            aria-current={u.slug === uniSlug ? "page" : undefined}
+            className={`rounded px-2.5 py-1 font-medium ${
+              u.slug === uniSlug ? "bg-ink text-sheet" : "hover:bg-sheet"
+            }`}
+          >
+            {u.short_name}
+          </Link>
+        ))}
+      </nav>
+
       {session ? (
-        <UploadForm
-          userId={session.userId}
-          preselected={preselected}
-          courses={courses.map((c) => ({
-            id: c.id,
-            label: `${c.code} ${c.title}`,
-          }))}
-        />
+        courses.length > 0 ? (
+          <UploadForm
+            key={uniSlug}
+            userId={session.userId}
+            preselected={course?.id ?? ""}
+            courses={courses.map((c) => ({
+              id: c.id,
+              label: `${c.code} ${c.title}`,
+            }))}
+          />
+        ) : (
+          <p className="mt-6 text-sm">
+            This university has no courses listed yet.{" "}
+            <Link href={`/u/${uniSlug}`} className="font-semibold underline">
+              Add your course first
+            </Link>
+            .
+          </p>
+        )
       ) : (
         <p className="mt-6 rounded bg-hi p-3 text-sm font-medium">
           Uploads turn on once the database is connected.
