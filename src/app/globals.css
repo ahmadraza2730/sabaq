@@ -68,6 +68,10 @@ body {
     --margin-x: 6.5rem;
   }
 }
+/* Small blocks keep the margin line close to the edge. */
+.sheet.sheet-tight {
+  --margin-x: 0.85rem;
+}
 
 /* One ruled line. The first column sits in the margin on wide screens. */
 .line {

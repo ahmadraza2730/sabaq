@@ -1,10 +1,11 @@
 import { cache } from "react";
 import { DEFAULT_UNIVERSITY, isConfigured } from "@/lib/config";
-import { sampleCourses, sampleResources } from "@/lib/sample";
+import { sampleCourses, sampleResources, sampleSlots } from "@/lib/sample";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Campus,
   Course,
+  ElectiveSlot,
   Reply,
   Resource,
   ResourceType,
@@ -31,6 +32,12 @@ export const listUniversities = cache(async (): Promise<University[]> => {
         short_name: "FAST-NUCES",
         course_count: sampleCourses.length,
         resource_count: sampleResources.length,
+        city: "Islamabad",
+        sector: "private",
+        founded: 2000,
+        website: "https://www.nu.edu.pk",
+        featured: true,
+        campus_count: 6,
       },
     ];
   }
@@ -38,6 +45,7 @@ export const listUniversities = cache(async (): Promise<University[]> => {
   const { data, error } = await supabase
     .from("university_feed")
     .select("*")
+    .order("featured", { ascending: false })
     .order("short_name");
   if (error) throw new Error(`Could not load universities: ${error.message}`);
   return (data ?? []) as University[];
@@ -52,12 +60,13 @@ export async function listCampuses(): Promise<Campus[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campuses")
-    .select("id, name, university_id, universities(short_name, slug)")
+    .select("id, name, city, university_id, universities(short_name, slug)")
     .order("name");
   if (error) throw new Error(`Could not load campuses: ${error.message}`);
   type Row = {
     id: string;
     name: string;
+    city: string | null;
     university_id: string;
     universities: { short_name: string; slug: string } | null;
   };
@@ -65,6 +74,7 @@ export async function listCampuses(): Promise<Campus[]> {
     .map((row) => ({
       id: row.id,
       name: row.name,
+      city: row.city,
       university_id: row.university_id,
       university_short_name: row.universities?.short_name ?? "",
       university_slug: row.universities?.slug ?? "",
@@ -99,6 +109,7 @@ export async function listCourses(
     .select("*")
     .eq("university_slug", university)
     .order("semester")
+    .order("position", { nullsFirst: false })
     .order("code");
   if (term) query = query.or(`code.ilike.%${term}%,title.ilike.%${term}%`);
 
@@ -138,6 +149,18 @@ export async function getCourseById(id: string): Promise<Course | null> {
     .eq("id", id)
     .maybeSingle();
   return data as Course | null;
+}
+
+export async function listElectiveSlots(universityId: string): Promise<ElectiveSlot[]> {
+  if (!isConfigured) return universityId === "sample-fast" ? sampleSlots : [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("elective_slots")
+    .select("id, program, semester, code_hint, label, credit_hours, position")
+    .eq("university_id", universityId)
+    .order("semester")
+    .order("position");
+  return (data ?? []) as ElectiveSlot[];
 }
 
 // ---------- Files ----------

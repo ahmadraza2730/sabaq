@@ -9,11 +9,28 @@ export type University = {
   short_name: string;
   course_count: number;
   resource_count: number;
+  city: string | null;
+  sector: "public" | "private" | null;
+  founded: number | null;
+  website: string | null;
+  featured: boolean;
+  campus_count: number;
+};
+
+export type ElectiveSlot = {
+  id: string;
+  program: string;
+  semester: number;
+  code_hint: string | null;
+  label: string;
+  credit_hours: string | null;
+  position: number;
 };
 
 export type Campus = {
   id: string;
   name: string;
+  city: string | null;
   university_id: string;
   university_short_name: string;
   university_slug: string;
@@ -27,6 +44,9 @@ export type Course = {
   university_slug: string;
   university_name: string;
   resource_count: number;
+  credit_hours: string | null;
+  program: string | null;
+  position: number | null;
 };
 
 export type Resource = {
@@ -131,4 +151,20 @@ export function formatDate(iso: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+/** "3+1" -> [3, 1]. Non-credit ("NC+0") and blanks count as zero. */
+export function parseCredits(value: string | null): [number, number] {
+  const [theory, lab] = (value ?? "").split("+").map((part) => Number(part));
+  return [Number.isFinite(theory) ? theory : 0, Number.isFinite(lab) ? lab : 0];
+}
+
+export function sumCredits(values: (string | null)[]) {
+  return values.reduce(
+    (total, value) => {
+      const [theory, lab] = parseCredits(value);
+      return [total[0] + theory, total[1] + lab];
+    },
+    [0, 0],
+  );
 }

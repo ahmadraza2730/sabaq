@@ -4,14 +4,16 @@ import { notFound } from "next/navigation";
 import { addCourse } from "@/app/actions";
 import { ErrorNote, one } from "@/components/ErrorNote";
 import { ResourceLine } from "@/components/ResourceLine";
+import { RoadmapTable, semestersIn } from "@/components/Roadmap";
 import {
   getUniversity,
+  listCampuses,
   listCourses,
+  listElectiveSlots,
   listMyVotes,
   searchResources,
 } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
-import type { Course } from "@/lib/types";
 
 type Props = PageProps<"/u/[uni]">;
 
@@ -29,33 +31,81 @@ export default async function UniversityPage({ params, searchParams }: Props) {
   const q = one(query.q).trim();
   const path = `/u/${university.slug}`;
 
-  const [courses, files, session] = await Promise.all([
+  const [courses, files, slots, campuses, session] = await Promise.all([
     listCourses(q, university.slug),
     searchResources(q, university.slug),
+    q ? Promise.resolve([]) : listElectiveSlots(university.id),
+    listCampuses(),
     getSession(),
   ]);
   const myVotes = session ? await listMyVotes(session.userId) : new Set<string>();
+  const ourCampuses = campuses.filter((c) => c.university_id === university.id);
+  const programs = [...new Set(courses.map((c) => c.program).filter(Boolean))];
+  const semesters = semestersIn(courses, slots);
 
-  const bySemester = new Map<number, Course[]>();
-  for (const course of courses) {
-    const list = bySemester.get(course.semester) ?? [];
-    list.push(course);
-    bySemester.set(course.semester, list);
-  }
+  const facts = [
+    university.sector === "public"
+      ? "Public university"
+      : university.sector === "private"
+        ? "Private university"
+        : null,
+    university.city ? `based in ${university.city}` : null,
+    university.founded ? `founded ${university.founded}` : null,
+  ].filter(Boolean);
 
   return (
     <>
-      <p className="pt-4 text-sm text-ink-soft">
-        <Link href="/" className="underline">
+      <p className="pt-8 text-sm text-ink-soft">
+        <Link href="/universities" className="underline">
           Universities
         </Link>
       </p>
-      <h1 className="mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-        {university.short_name}
-      </h1>
-      <p className="mt-2 text-ink-soft">{university.name}</p>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+        <div>
+          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+            {university.short_name}
+          </h1>
+          <p className="mt-1 text-lg text-ink-soft">{university.name}</p>
+        </div>
+        {university.website && (
+          <a
+            href={university.website}
+            className="text-sm font-semibold underline"
+            rel="noopener noreferrer"
+          >
+            Official website
+          </a>
+        )}
+      </div>
 
-      <form action={path} className="mb-8 mt-6 flex max-w-xl gap-2">
+      {(facts.length > 0 || ourCampuses.length > 0) && (
+        <dl className="mt-5 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+          {facts.length > 0 && (
+            <>
+              <dt className="font-semibold">About</dt>
+              <dd className="text-ink-soft">{facts.join(", ")}.</dd>
+            </>
+          )}
+          {ourCampuses.length > 0 && (
+            <>
+              <dt className="font-semibold">
+                {ourCampuses.length} {ourCampuses.length === 1 ? "campus" : "campuses"}
+              </dt>
+              <dd className="text-ink-soft">
+                {ourCampuses.map((c) => c.name).join(", ")}
+              </dd>
+            </>
+          )}
+          {programs.length > 0 && (
+            <>
+              <dt className="font-semibold">Roadmap</dt>
+              <dd className="text-ink-soft">{programs.join(", ")}</dd>
+            </>
+          )}
+        </dl>
+      )}
+
+      <form action={path} className="mb-6 mt-8 flex max-w-xl gap-2">
         <label htmlFor="q" className="sr-only">
           Search {university.short_name} courses and files
         </label>
@@ -71,6 +121,24 @@ export default async function UniversityPage({ params, searchParams }: Props) {
       </form>
 
       <ErrorNote message={one(query.error)} />
+
+      {!q && semesters.length > 1 && (
+        <nav
+          aria-label="Semesters"
+          className="z-30 sm:sticky sm:top-[57px] -mx-4 mb-8 flex flex-wrap items-center gap-1.5 border-b border-rule bg-paper/95 px-4 py-2.5 text-sm backdrop-blur"
+        >
+          <span className="mr-1 text-ink-soft">Semester</span>
+          {semesters.map((n) => (
+            <a
+              key={n}
+              href={`#semester-${n}`}
+              className="grid size-8 place-items-center rounded border border-rule bg-sheet font-semibold tabular-nums hover:border-ink"
+            >
+              {n}
+            </a>
+          ))}
+        </nav>
+      )}
 
       {q && (
         <p className="mb-6 text-sm">
@@ -98,7 +166,7 @@ export default async function UniversityPage({ params, searchParams }: Props) {
         </section>
       )}
 
-      {courses.length === 0 && (
+      {courses.length === 0 && slots.length === 0 ? (
         <div className="sheet mb-10">
           <p className="line">
             <span className="in-margin" />
@@ -109,44 +177,25 @@ export default async function UniversityPage({ params, searchParams }: Props) {
             </span>
           </p>
         </div>
+      ) : (
+        <>
+          {q && <h2 className="mb-3 font-display text-xl font-bold">Courses</h2>}
+          <RoadmapTable
+            courses={courses}
+            slots={slots}
+            universitySlug={university.slug}
+          />
+        </>
       )}
 
-      {[...bySemester.entries()].map(([semester, list]) => (
-        <section key={semester} className="mb-10">
-          <h2 className="mb-3 font-display text-xl font-bold">
-            Semester {semester}
-          </h2>
-          <ul className="sheet">
-            {list.map((course) => (
-              <li key={course.id} className="line">
-                <span className="in-margin text-sm font-semibold tabular-nums text-ink-soft">
-                  {course.code}
-                </span>
-                <span className="flex flex-wrap items-baseline justify-between gap-x-6">
-                  <Link
-                    href={`${path}/${course.code}`}
-                    className="font-medium hover:underline"
-                  >
-                    {course.title}
-                  </Link>
-                  <span className="text-sm text-ink-soft">
-                    {course.resource_count === 0
-                      ? "No files yet"
-                      : `${course.resource_count} ${
-                          course.resource_count === 1 ? "file" : "files"
-                        }`}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-
-      <section className="mt-12 max-w-xl">
+      <section id="add-course" className="mt-12 max-w-xl scroll-mt-24">
         <h2 className="font-display text-xl font-bold">Course missing?</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Add electives and any course not listed, using the code from your
+          transcript or course outline.
+        </p>
         {session ? (
-          <form action={addCourse.bind(null, university.slug)} className="mt-3 grid gap-3">
+          <form action={addCourse.bind(null, university.slug)} className="mt-4 grid gap-3">
             <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
               <label className="grid gap-1 text-sm font-medium">
                 Code
@@ -154,7 +203,7 @@ export default async function UniversityPage({ params, searchParams }: Props) {
                   name="code"
                   required
                   maxLength={12}
-                  placeholder="CS2001"
+                  placeholder="CS4063"
                   className="field uppercase"
                 />
               </label>
@@ -165,7 +214,7 @@ export default async function UniversityPage({ params, searchParams }: Props) {
                   required
                   minLength={3}
                   maxLength={120}
-                  placeholder="Data Structures"
+                  placeholder="Natural Language Processing"
                   className="field"
                 />
               </label>
@@ -188,7 +237,7 @@ export default async function UniversityPage({ params, searchParams }: Props) {
             </div>
           </form>
         ) : (
-          <p className="mt-2 text-sm">
+          <p className="mt-3 text-sm">
             <Link
               href={`/login?next=${encodeURIComponent(path)}`}
               className="font-semibold underline"
