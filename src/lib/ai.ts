@@ -11,7 +11,14 @@ export const AI_DAILY_LIMIT = 20;
 const GATEWAY_MODEL = process.env.AI_MODEL || "anthropic/claude-haiku-5.5";
 const ANTHROPIC_MODEL = process.env.AI_MODEL || "claude-haiku-5-5";
 
-const GEMINI_MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-2.5-flash"];
+// Tried in order. When one is overloaded (503) or rate-limited (429) the next one answers.
+const GEMINI_MODELS = [
+  process.env.GEMINI_MODEL || "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-3.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+];
 
 export function isAssistantEnabled() {
   return Boolean(
@@ -32,6 +39,7 @@ async function openAiCompatible(
   user: string,
 ): Promise<Response> {
   return fetch(url, {
+    signal: AbortSignal.timeout(15000),
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({
@@ -117,20 +125,27 @@ export async function answerQuestion(
   if (process.env.GEMINI_API_KEY) {
     let last = "";
     for (const model of [...new Set(GEMINI_MODELS)]) {
-      const response = await openAiCompatible(
-        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        process.env.GEMINI_API_KEY,
-        model,
-        user,
-      );
-      if (response.ok) return readChoice(response);
+      let response: Response;
+      try {
+        response = await openAiCompatible(
+          "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          process.env.GEMINI_API_KEY,
+          model,
+          user,
+        );
+      } catch (error) {
+        console.error("Gemini request timed out", model, error);
+        continue;
+      }
+      if (response.ok) {
+        const text = await readChoice(response);
+        if (text) return text;
+        continue;
+      }
       last = await response.text();
       console.error("Gemini request failed", model, response.status, last);
       if (response.status === 401 || response.status === 403) throw new Error(NOT_SET_UP);
-      if (response.status === 429) {
-        throw new Error("The assistant is busy right now. Try again in a minute.");
-      }
-      // 400/404: model name not available on this key; try the next one.
+      // 429/500/503: busy or rate-limited; 400/404: model not on this key. Try the next one.
     }
     throw new Error("The assistant could not answer right now. Try again in a minute.");
   }
