@@ -29,9 +29,9 @@ export default async function AskPage({ params }: Props) {
   return (
     <div className="max-w-2xl">
       <p className="text-ink-soft">
-        Ask a question and get an answer built only from the notes and papers
-        students uploaded for {course.code}, with links to the files it used.
-        It reads PDF and Word files.
+        Ask about {course.code}. Answers come from the notes and papers
+        students uploaded for this course, with links to the files used. When
+        nothing matches, you get a general explanation, clearly marked.
       </p>
       <p className="mt-2 text-sm text-ink-soft">
         {indexed === 0
@@ -55,7 +55,10 @@ export default async function AskPage({ params }: Props) {
           to ask the notes.
         </p>
       ) : (
-        <AskForm courseId={course.id} courseCode={course.code} />
+        <AskForm
+          courseId={course.id}
+          placeholder={`Ask anything about ${course.code} ${course.title}`}
+        />
       )}
     </div>
   );

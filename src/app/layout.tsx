@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/bricolage-grotesque";
 import "@fontsource-variable/figtree";
 import Link from "next/link";
 import { signOut } from "@/app/actions";
 import { Logo } from "@/components/Logo";
-import { isConfigured } from "@/lib/config";
+import { MobileMenu } from "@/components/MobileMenu";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { AUTHOR_GITHUB, AUTHOR_LINKEDIN, isConfigured } from "@/lib/config";
 import { getSession } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -14,15 +16,43 @@ export const metadata: Metadata = {
     template: "%s | Sabaq",
   },
   description:
-    "Notes, past papers, course discussions and a team finder for FAST-NUCES students, and for students at universities across Pakistan.",
+    "Notes, past papers, course discussions, a study assistant and a team finder for FAST-NUCES students, and for students at universities across Pakistan.",
 };
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fdfefd" },
+    { media: "(prefers-color-scheme: dark)", color: "#151f33" },
+  ],
+};
+
+// Runs before the page paints, so a dark-mode reader never sees a white flash.
+const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`;
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
   const year = new Date().getFullYear();
 
+  const links = [
+    { href: "/u/fast-nuces", label: "FAST-NUCES" },
+    { href: "/assistant", label: "Assistant" },
+    { href: "/universities", label: "Universities" },
+    { href: "/teams", label: "Teams" },
+  ];
+  const accountLinks = [
+    ...(session?.profile.role === "admin" ? [{ href: "/admin", label: "Review queue" }] : []),
+    session
+      ? { href: "/profile", label: session.profile.full_name.split(" ")[0] || "Profile" }
+      : { href: "/login", label: "Sign in" },
+  ];
+
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"
@@ -38,47 +68,33 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </p>
         )}
 
-        <header className="z-40 sm:sticky sm:top-0 border-b border-rule bg-sheet/95 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-8 gap-y-2 px-4 py-3">
+        <header className="sticky top-0 z-40 border-b border-rule bg-sheet">
+          <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
             <Logo />
-            <nav
-              aria-label="Main"
-              className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-medium"
-            >
-              <Link href="/u/fast-nuces" className="hover:underline">
-                FAST-NUCES
-              </Link>
-              <Link href="/universities" className="hover:underline">
-                Universities
-              </Link>
-              <Link href="/teams" className="hover:underline">
-                Teams
-              </Link>
-              {session?.profile.role === "admin" && (
-                <Link href="/admin" className="hover:underline">
-                  Review queue
-                </Link>
-              )}
-              {session ? (
-                <>
-                  <Link href="/profile" className="hover:underline">
-                    {session.profile.full_name.split(" ")[0] || "Profile"}
+            <div className="flex items-center gap-2 md:gap-5">
+              <nav
+                aria-label="Main"
+                className="hidden items-center gap-5 text-sm font-medium md:flex"
+              >
+                {[...links, ...accountLinks].map((link) => (
+                  <Link key={link.href} href={link.href} className="hover:underline">
+                    {link.label}
                   </Link>
+                ))}
+                {session && (
                   <form action={signOut}>
                     <button className="cursor-pointer text-ink-soft hover:underline">
                       Sign out
                     </button>
                   </form>
-                </>
-              ) : (
-                <Link href="/login" className="hover:underline">
-                  Sign in
-                </Link>
-              )}
-              <Link href="/upload" className="btn py-1.5 text-sm">
+                )}
+              </nav>
+              <ThemeToggle />
+              <Link href="/upload" className="btn h-9 px-3 py-0 text-sm">
                 Upload
               </Link>
-            </nav>
+              <MobileMenu items={[...links, ...accountLinks]} signedIn={Boolean(session)} />
+            </div>
           </div>
         </header>
 
@@ -101,18 +117,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/u/fast-nuces" className="text-ink-soft hover:text-ink hover:underline">
                 FAST-NUCES courses
               </Link>
+              <Link href="/assistant" className="text-ink-soft hover:text-ink hover:underline">
+                Study assistant
+              </Link>
               <Link href="/universities" className="text-ink-soft hover:text-ink hover:underline">
                 All universities
               </Link>
               <Link href="/teams" className="text-ink-soft hover:text-ink hover:underline">
                 Team finder
               </Link>
-              <Link href="/upload" className="text-ink-soft hover:text-ink hover:underline">
-                Upload a file
-              </Link>
             </nav>
             <nav aria-label="Project" className="grid content-start gap-2">
               <p className="font-semibold">Project</p>
+              <Link href="/upload" className="text-ink-soft hover:text-ink hover:underline">
+                Upload a file
+              </Link>
               <a
                 href="https://github.com/ahmadraza2730/sabaq"
                 className="text-ink-soft hover:text-ink hover:underline"
@@ -125,15 +144,30 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </nav>
           </div>
           <div className="border-t border-rule">
-            <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm">
+            <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-sm">
               <p className="text-ink-soft">© {year} Sabaq</p>
-              <p>
-                Made by{" "}
+              <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span>
+                  Made by{" "}
+                  <span className="font-semibold underline decoration-margin decoration-2 underline-offset-4">
+                    Muhammad Ahmad
+                  </span>
+                </span>
+                {AUTHOR_LINKEDIN && (
+                  <a
+                    href={AUTHOR_LINKEDIN}
+                    rel="noopener noreferrer"
+                    className="text-ink-soft hover:text-ink hover:underline"
+                  >
+                    LinkedIn
+                  </a>
+                )}
                 <a
-                  href="https://github.com/ahmadraza2730"
-                  className="font-semibold underline decoration-margin decoration-2 underline-offset-4"
+                  href={AUTHOR_GITHUB}
+                  rel="noopener noreferrer"
+                  className="text-ink-soft hover:text-ink hover:underline"
                 >
-                  Muhammad Ahmad
+                  GitHub
                 </a>
               </p>
             </div>

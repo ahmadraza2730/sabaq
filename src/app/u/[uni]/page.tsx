@@ -125,7 +125,7 @@ export default async function UniversityPage({ params, searchParams }: Props) {
       {!q && semesters.length > 1 && (
         <nav
           aria-label="Semesters"
-          className="z-30 sm:sticky sm:top-[57px] -mx-4 mb-8 flex flex-wrap items-center gap-1.5 border-b border-rule bg-paper/95 px-4 py-2.5 text-sm backdrop-blur"
+          className="sticky top-14 z-30 -mx-4 mb-8 flex flex-wrap items-center gap-1.5 border-b border-rule bg-paper px-4 py-2.5 text-sm"
         >
           <span className="mr-1 text-ink-soft">Semester</span>
           {semesters.map((n) => (

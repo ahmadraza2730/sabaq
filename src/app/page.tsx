@@ -33,8 +33,9 @@ const TOOLS = [
   },
   {
     label: "Assistant",
-    title: "Ask the notes",
-    text: "Get an answer built only from the files uploaded to that course, with links to where it came from.",
+    title: "FAST study assistant",
+    text: "Ask about any course in English or Roman Urdu. It cites the uploaded notes when they cover it and explains from general knowledge when they do not.",
+    href: "/assistant",
   },
   {
     label: "Teams",

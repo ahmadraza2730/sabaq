@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { AI_DAILY_LIMIT, answerFromNotes, isAssistantEnabled } from "@/lib/ai";
+import { AI_DAILY_LIMIT, answerQuestion, isAssistantEnabled, type Excerpt } from "@/lib/ai";
 import { isConfigured } from "@/lib/config";
 import { indexResource } from "@/lib/indexing";
 import { createClient, getSession } from "@/lib/supabase/server";
@@ -387,20 +387,26 @@ export type AssistantResult =
   | {
       ok: true;
       answer: string;
+      fromNotes: boolean;
       sources: { number: number; resourceId: string; title: string }[];
     }
   | { ok: false; error: string };
 
+/**
+ * Answer a question for one course (courseId) or across every course at a
+ * university (courseId null). Uses uploaded notes when they match.
+ */
 export async function askAssistant(
-  courseId: string,
+  courseId: string | null,
   rawQuestion: string,
+  universitySlug = "fast-nuces",
 ): Promise<AssistantResult> {
   const session = await getSession();
-  if (!session) return { ok: false, error: "Sign in to ask the notes." };
+  if (!session) return { ok: false, error: "Sign in to use the assistant." };
   if (!isAssistantEnabled())
     return { ok: false, error: "The study assistant is not switched on yet." };
 
-  const question = rawQuestion.trim().slice(0, 500);
+  const question = rawQuestion.trim().slice(0, 1000);
   if (question.length < 5)
     return { ok: false, error: "Write a question of at least a few words." };
 
@@ -418,40 +424,52 @@ export async function askAssistant(
     };
   }
 
-  const { data: matches, error } = await supabase.rpc("match_chunks", {
-    cid: courseId,
-    question,
-    n: 6,
-  });
-  if (error) return { ok: false, error: `Search failed: ${error.message}` };
-
-  const excerpts = ((matches ?? []) as {
-    resource_id: string;
-    title: string;
-    content: string;
-  }[]).map((m) => ({ resourceId: m.resource_id, title: m.title, content: m.content }));
-
-  if (excerpts.length === 0) {
-    return {
-      ok: true,
-      answer:
-        "None of the notes uploaded for this course mention that yet. Try different words, or ask in the Discussion tab.",
-      sources: [],
-    };
+  let context = "";
+  let excerpts: Excerpt[] = [];
+  if (courseId) {
+    const [{ data: course }, { data: matches }] = await Promise.all([
+      supabase.from("courses").select("code, title").eq("id", courseId).maybeSingle(),
+      supabase.rpc("match_chunks", { cid: courseId, question, n: 6 }),
+    ]);
+    context = course
+      ? `The student is asking about the course ${course.code} ${course.title}.`
+      : "";
+    excerpts = ((matches ?? []) as { resource_id: string; title: string; content: string }[]).map(
+      (m) => ({ resourceId: m.resource_id, title: m.title, content: m.content }),
+    );
+  } else {
+    const { data: matches } = await supabase.rpc("match_chunks_university", {
+      uni: universitySlug,
+      question,
+      n: 6,
+    });
+    context =
+      universitySlug === "fast-nuces"
+        ? "The student is at FAST-NUCES (National University of Computer and Emerging Sciences), most likely in BS Computer Science."
+        : `The student's university is ${universitySlug}.`;
+    excerpts = (
+      (matches ?? []) as { resource_id: string; title: string; content: string; course_code: string }[]
+    ).map((m) => ({
+      resourceId: m.resource_id,
+      title: m.title,
+      content: m.content,
+      courseCode: m.course_code,
+    }));
   }
 
   try {
-    const answer = await answerFromNotes(question, excerpts);
+    const answer = await answerQuestion(question, excerpts, context);
     await supabase
       .from("ai_questions")
       .insert({ user_id: session.userId, course_id: courseId });
     return {
       ok: true,
       answer,
+      fromNotes: excerpts.length > 0,
       sources: excerpts.map((e, i) => ({
         number: i + 1,
         resourceId: e.resourceId,
-        title: e.title,
+        title: e.courseCode ? `${e.title} (${e.courseCode})` : e.title,
       })),
     };
   } catch (askError) {

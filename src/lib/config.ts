@@ -18,3 +18,7 @@ export const ALLOWED_EXTENSIONS = [
   "jpeg",
   "zip",
 ];
+
+/** Shown in the footer next to "Made by". Leave empty to hide. */
+export const AUTHOR_LINKEDIN = process.env.NEXT_PUBLIC_AUTHOR_LINKEDIN ?? "";
+export const AUTHOR_GITHUB = "https://github.com/ahmadraza2730";
