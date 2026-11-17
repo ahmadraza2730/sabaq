@@ -97,7 +97,13 @@ export async function answerQuestion(
     }),
   });
   if (!response.ok) {
-    console.error("AI Gateway request failed", response.status, await response.text());
+    const detail = await response.text();
+    console.error("AI Gateway request failed", response.status, detail);
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        "The study assistant is not switched on yet. The site owner needs to finish setting it up.",
+      );
+    }
     throw new Error("The assistant could not answer right now. Try again in a minute.");
   }
   const json = (await response.json()) as {
