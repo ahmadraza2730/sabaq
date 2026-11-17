@@ -9,6 +9,7 @@ import type {
   Reply,
   Resource,
   ResourceType,
+  Task,
   TeamKind,
   TeamPost,
   Thread,
@@ -151,16 +152,97 @@ export async function getCourseById(id: string): Promise<Course | null> {
   return data as Course | null;
 }
 
-export async function listElectiveSlots(universityId: string): Promise<ElectiveSlot[]> {
-  if (!isConfigured) return universityId === "sample-fast" ? sampleSlots : [];
+export async function listElectiveSlots(
+  universityId: string,
+  program = "CS",
+): Promise<ElectiveSlot[]> {
+  if (!isConfigured) return universityId === "sample-fast" && program === "CS" ? sampleSlots : [];
   const supabase = await createClient();
   const { data } = await supabase
     .from("elective_slots")
     .select("id, program, semester, code_hint, label, credit_hours, position")
     .eq("university_id", universityId)
+    .eq("program", program)
     .order("semester")
     .order("position");
   return (data ?? []) as ElectiveSlot[];
+}
+
+/**
+ * The roadmap for one program: every course with the semester and order
+ * it has in that program.
+ */
+export async function listProgramRoadmap(program: string): Promise<Course[]> {
+  if (!isConfigured) return program === "CS" ? sampleCourses : [];
+  const supabase = await createClient();
+  const [{ data: placements, error }, courses] = await Promise.all([
+    supabase.from("program_courses").select("course_id, semester, position").eq("program", program),
+    listCourses("", DEFAULT_UNIVERSITY),
+  ]);
+  if (error) throw new Error(`Could not load the roadmap: ${error.message}`);
+  const byId = new Map(courses.map((c) => [c.id, c]));
+  const roadmap: Course[] = [];
+  for (const p of placements ?? []) {
+    const course = byId.get(p.course_id as string);
+    if (course) {
+      roadmap.push({ ...course, semester: p.semester as number, position: p.position as number });
+    }
+  }
+  return roadmap.sort(
+    (a, b) => a.semester - b.semester || (a.position ?? 0) - (b.position ?? 0),
+  );
+}
+
+/** Courses that are in no program roadmap: electives students added. */
+export async function listOtherCourses(): Promise<Course[]> {
+  if (!isConfigured) return [];
+  const supabase = await createClient();
+  const [{ data: placements }, courses] = await Promise.all([
+    supabase.from("program_courses").select("course_id"),
+    listCourses("", DEFAULT_UNIVERSITY),
+  ]);
+  const placed = new Set((placements ?? []).map((p) => p.course_id as string));
+  return courses.filter((c) => !placed.has(c.id));
+}
+
+// ---------- Tasks ----------
+
+export async function listTasks(userId: string): Promise<Task[]> {
+  if (!isConfigured) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, title, notes, course_id, group_label, due_at, done, source, link, created_at")
+    .eq("user_id", userId)
+    .order("due_at", { ascending: true, nullsFirst: false })
+    .limit(500);
+  if (error) throw new Error(`Could not load your work: ${error.message}`);
+  return (data ?? []) as Task[];
+}
+
+/** Open tasks that are overdue or due within the next two days. */
+export async function countDueSoon(userId: string): Promise<number> {
+  if (!isConfigured) return 0;
+  const supabase = await createClient();
+  const soon = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const { count } = await supabase
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("done", false)
+    .lte("due_at", soon);
+  return count ?? 0;
+}
+
+export async function getGoogleConnection(userId: string) {
+  if (!isConfigured) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("google_connections")
+    .select("google_email, connected_at, last_synced_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data as { google_email: string | null; connected_at: string; last_synced_at: string | null } | null;
 }
 
 // ---------- Files ----------

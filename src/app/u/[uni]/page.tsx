@@ -11,8 +11,11 @@ import {
   listCourses,
   listElectiveSlots,
   listMyVotes,
+  listOtherCourses,
+  listProgramRoadmap,
   searchResources,
 } from "@/lib/data";
+import { PROGRAMS, PROGRAM_CODES, isProgram } from "@/lib/fast";
 import { getSession } from "@/lib/supabase/server";
 
 type Props = PageProps<"/u/[uni]">;
@@ -31,16 +34,23 @@ export default async function UniversityPage({ params, searchParams }: Props) {
   const q = one(query.q).trim();
   const path = `/u/${university.slug}`;
 
-  const [courses, files, slots, campuses, session] = await Promise.all([
-    listCourses(q, university.slug),
+  const session = await getSession();
+  const isFast = university.slug === "fast-nuces";
+  const program = isProgram(query.program)
+    ? query.program
+    : isProgram(session?.profile.program)
+      ? session.profile.program
+      : "CS";
+
+  const [courses, files, slots, campuses, others] = await Promise.all([
+    q || !isFast ? listCourses(q, university.slug) : listProgramRoadmap(program),
     searchResources(q, university.slug),
-    q ? Promise.resolve([]) : listElectiveSlots(university.id),
+    q ? Promise.resolve([]) : listElectiveSlots(university.id, program),
     listCampuses(),
-    getSession(),
+    q || !isFast ? Promise.resolve([]) : listOtherCourses(),
   ]);
   const myVotes = session ? await listMyVotes(session.userId) : new Set<string>();
   const ourCampuses = campuses.filter((c) => c.university_id === university.id);
-  const programs = [...new Set(courses.map((c) => c.program).filter(Boolean))];
   const semesters = semestersIn(courses, slots);
 
   const facts = [
@@ -56,8 +66,8 @@ export default async function UniversityPage({ params, searchParams }: Props) {
   return (
     <>
       <p className="pt-8 text-sm text-ink-soft">
-        <Link href="/universities" className="underline">
-          Universities
+        <Link href="/" className="underline">
+          Home
         </Link>
       </p>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
@@ -96,12 +106,7 @@ export default async function UniversityPage({ params, searchParams }: Props) {
               </dd>
             </>
           )}
-          {programs.length > 0 && (
-            <>
-              <dt className="font-semibold">Roadmap</dt>
-              <dd className="text-ink-soft">{programs.join(", ")}</dd>
-            </>
-          )}
+
         </dl>
       )}
 
@@ -121,6 +126,29 @@ export default async function UniversityPage({ params, searchParams }: Props) {
       </form>
 
       <ErrorNote message={one(query.error)} />
+
+      {!q && isFast && (
+        <nav aria-label="Degree program" className="mb-4 flex flex-wrap gap-1.5">
+          {PROGRAM_CODES.map((code) => (
+            <Link
+              key={code}
+              href={`${path}?program=${code}`}
+              aria-current={code === program ? "page" : undefined}
+              title={PROGRAMS[code]}
+              className={`rounded border px-3 py-1.5 text-sm font-semibold ${
+                code === program
+                  ? "border-ink bg-ink text-sheet"
+                  : "border-rule bg-sheet hover:border-ink"
+              }`}
+            >
+              BS {code}
+            </Link>
+          ))}
+        </nav>
+      )}
+      {!q && isFast && (
+        <h2 className="mb-4 font-display text-2xl font-bold">{PROGRAMS[program]}</h2>
+      )}
 
       {!q && semesters.length > 1 && (
         <nav
@@ -186,6 +214,34 @@ export default async function UniversityPage({ params, searchParams }: Props) {
             universitySlug={university.slug}
           />
         </>
+      )}
+
+      {others.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-1 font-display text-xl font-bold">Electives and other courses</h2>
+          <p className="mb-3 text-sm text-ink-soft">
+            Courses students added that are not part of a fixed roadmap.
+          </p>
+          <ul className="sheet">
+            {others.map((course) => (
+              <li key={course.id} className="line">
+                <span className="in-margin text-sm font-semibold tabular-nums text-ink-soft">
+                  {course.code}
+                </span>
+                <span className="flex flex-wrap items-baseline justify-between gap-x-6">
+                  <Link href={`${path}/${course.code}`} className="font-medium hover:underline">
+                    {course.title}
+                  </Link>
+                  <span className="text-sm text-ink-soft">
+                    {course.resource_count === 0
+                      ? "No files"
+                      : `${course.resource_count} ${course.resource_count === 1 ? "file" : "files"}`}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section id="add-course" className="mt-12 max-w-xl scroll-mt-24">

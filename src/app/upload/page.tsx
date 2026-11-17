@@ -43,20 +43,6 @@ export default async function UploadPage({
         page.
       </p>
 
-      <nav aria-label="University" className="mt-6 flex flex-wrap gap-1 text-sm">
-        {universities.map((u) => (
-          <Link
-            key={u.id}
-            href={`/upload?uni=${u.slug}`}
-            aria-current={u.slug === uniSlug ? "page" : undefined}
-            className={`rounded px-2.5 py-1 font-medium ${
-              u.slug === uniSlug ? "bg-ink text-sheet" : "hover:bg-sheet"
-            }`}
-          >
-            {u.short_name}
-          </Link>
-        ))}
-      </nav>
 
       {session ? (
         courses.length > 0 ? (

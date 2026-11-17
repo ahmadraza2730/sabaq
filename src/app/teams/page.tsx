@@ -55,7 +55,7 @@ export default async function TeamsPage({ searchParams }: PageProps<"/teams">) {
             action={createTeamPost}
             className="grid gap-4 pb-5 pl-8 pr-4 sm:pl-[7.25rem] sm:pr-6"
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <label className="grid gap-1 text-sm font-medium">
                 Kind
                 <select name="kind" required defaultValue="project" className="field">
@@ -66,21 +66,7 @@ export default async function TeamsPage({ searchParams }: PageProps<"/teams">) {
                   ))}
                 </select>
               </label>
-              <label className="grid gap-1 text-sm font-medium">
-                University
-                <select
-                  name="university_id"
-                  defaultValue={myUniversityId ?? ""}
-                  className="field"
-                >
-                  <option value="">Any university</option>
-                  {universities.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.short_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <input type="hidden" name="university_id" value={myUniversityId ?? universities[0]?.id ?? ""} />
             </div>
             <label className="grid gap-1 text-sm font-medium">
               Title
@@ -161,17 +147,6 @@ export default async function TeamsPage({ searchParams }: PageProps<"/teams">) {
             {kinds.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 font-medium">
-          University
-          <select name="uni" defaultValue={university?.slug ?? ""} className="field">
-            <option value="">All universities</option>
-            {universities.map((u) => (
-              <option key={u.id} value={u.slug}>
-                {u.short_name}
               </option>
             ))}
           </select>

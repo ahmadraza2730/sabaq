@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { RoadmapGrid } from "@/components/Roadmap";
 import { DEFAULT_UNIVERSITY } from "@/lib/config";
-import { listCourses, listElectiveSlots, listUniversities } from "@/lib/data";
+import {
+  countDueSoon,
+  listElectiveSlots,
+  listProgramRoadmap,
+  listUniversities,
+} from "@/lib/data";
+import { PROGRAMS, PROGRAM_CODES, isProgram, sectionLabel } from "@/lib/fast";
+import { getSession } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +45,12 @@ const TOOLS = [
     href: "/assistant",
   },
   {
+    label: "My work",
+    title: "Assignments and reminders",
+    text: "Connect Google Classroom to pull in what is due and what you have not turned in, or add your own reminders.",
+    href: "/tasks",
+  },
+  {
     label: "Teams",
     title: "Find teammates",
     text: "Partners for semester projects, hackathons like NaSCon, your final year project or a study group.",
@@ -45,21 +58,55 @@ const TOOLS = [
   },
 ];
 
-export default async function Home() {
-  const universities = await listUniversities();
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const query = await searchParams;
+  const [universities, session] = await Promise.all([listUniversities(), getSession()]);
   const fast = universities.find((u) => u.slug === DEFAULT_UNIVERSITY);
-  const others = universities.filter((u) => u.slug !== DEFAULT_UNIVERSITY);
+  const program = isProgram(query.program)
+    ? query.program
+    : isProgram(session?.profile.program)
+      ? session.profile.program
+      : "CS";
 
-  const [courses, slots] = await Promise.all([
-    listCourses("", DEFAULT_UNIVERSITY),
-    fast ? listElectiveSlots(fast.id) : Promise.resolve([]),
+  const [roadmapCourses, slots, dueSoon] = await Promise.all([
+    listProgramRoadmap(program),
+    fast ? listElectiveSlots(fast.id, program) : Promise.resolve([]),
+    session ? countDueSoon(session.userId) : Promise.resolve(0),
   ]);
-  const roadmapCourses = courses.filter(
-    (c) => c.program === "BS Computer Science",
-  );
+  const profile = session?.profile;
+  const section = profile
+    ? sectionLabel(profile.program, profile.current_semester, profile.section)
+    : null;
 
   return (
     <>
+      {session && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded border border-rule bg-sheet px-4 py-3 text-sm">
+          <span>
+            {profile?.roll_number ? (
+              <>
+                <span className="font-semibold">{profile.full_name}</span>{" "}
+                <span className="text-ink-soft">
+                  {[profile.roll_number, section].filter(Boolean).join(", ")}
+                </span>
+              </>
+            ) : (
+              <>
+                <Link href="/onboarding" className="font-semibold underline">
+                  Set up your FAST profile
+                </Link>{" "}
+                <span className="text-ink-soft">with your roll number, program and section.</span>
+              </>
+            )}
+          </span>
+          <Link href="/tasks" className={dueSoon > 0 ? "font-semibold text-margin underline" : "underline"}>
+            {dueSoon > 0
+              ? `${dueSoon} ${dueSoon === 1 ? "task" : "tasks"} due soon`
+              : "My work"}
+          </Link>
+        </div>
+      )}
+
       <section className="grid gap-10 pb-14 pt-10 sm:pt-16 lg:grid-cols-[1.35fr_1fr] lg:items-end">
         <div>
           <h1 className="font-display text-4xl font-extrabold leading-[1.04] tracking-tight sm:text-6xl">
@@ -67,9 +114,10 @@ export default async function Home() {
             sorted by course.
           </h1>
           <p className="mt-5 max-w-xl text-lg text-ink-soft">
-            Built for FAST-NUCES students across all six campuses: find what
-            your seniors already wrote, ask about what you are stuck on, and
-            leave something for the next batch.
+            Built for FAST-NUCES students in BS CS, SE, AI, DS and Cyber
+            Security, across all six campuses: find what your seniors already
+            wrote, keep track of what is due, and ask the study assistant when
+            you are stuck.
           </p>
 
           <form
@@ -97,7 +145,7 @@ export default async function Home() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
               <Link
                 key={n}
-                href={`/u/${DEFAULT_UNIVERSITY}#semester-${n}`}
+                href={`/u/${DEFAULT_UNIVERSITY}?program=${program}#semester-${n}`}
                 className="grid size-8 place-items-center rounded border border-rule bg-sheet font-semibold tabular-nums hover:border-ink"
               >
                 {n}
@@ -125,20 +173,38 @@ export default async function Home() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-2xl font-bold sm:text-3xl">
-              BS Computer Science, all eight semesters
+              {PROGRAMS[program]}, all eight semesters
             </h2>
             <p className="mt-1 text-ink-soft">
               The FAST-NUCES roadmap. Open any course for its files, questions
-              and notes assistant.
+              and study assistant.
             </p>
           </div>
           <Link
-            href={`/u/${DEFAULT_UNIVERSITY}`}
+            href={`/u/${DEFAULT_UNIVERSITY}?program=${program}`}
             className="text-sm font-semibold underline"
           >
             Full course list with credit hours
           </Link>
         </div>
+        <nav aria-label="Degree program" className="mb-5 flex flex-wrap gap-1.5">
+          {PROGRAM_CODES.map((code) => (
+            <Link
+              key={code}
+              href={`/?program=${code}`}
+              scroll={false}
+              aria-current={code === program ? "page" : undefined}
+              title={PROGRAMS[code]}
+              className={`rounded border px-3 py-1.5 text-sm font-semibold ${
+                code === program
+                  ? "border-ink bg-ink text-sheet"
+                  : "border-rule bg-sheet hover:border-ink"
+              }`}
+            >
+              BS {code}
+            </Link>
+          ))}
+        </nav>
         <RoadmapGrid
           courses={roadmapCourses}
           slots={slots}
@@ -173,39 +239,6 @@ export default async function Home() {
         </ul>
       </section>
 
-      {others.length > 0 && (
-        <section>
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="font-display text-2xl font-bold sm:text-3xl">
-                Not at FAST?
-              </h2>
-              <p className="mt-1 text-ink-soft">
-                {others.length} more universities across Pakistan. Students add
-                their own courses as they go.
-              </p>
-            </div>
-            <Link
-              href="/universities"
-              className="text-sm font-semibold underline"
-            >
-              See all universities and campuses
-            </Link>
-          </div>
-          <ul className="flex flex-wrap gap-2">
-            {others.map((u) => (
-              <li key={u.id}>
-                <Link
-                  href={`/u/${u.slug}`}
-                  className="inline-block rounded border border-rule bg-sheet px-3 py-1.5 text-sm font-medium hover:border-ink"
-                >
-                  {u.short_name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </>
   );
 }

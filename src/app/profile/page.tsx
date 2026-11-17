@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { updateProfile } from "@/app/actions";
-import { ErrorNote, one } from "@/components/ErrorNote";
 import { listCampuses, listMyUploads } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
+import { sectionLabel } from "@/lib/fast";
 import { TYPE_LABELS, type Campus, type ResourceStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +15,7 @@ const STATUS_TEXT: Record<ResourceStatus, string> = {
   rejected: "Not approved",
 };
 
-export default async function ProfilePage({
-  searchParams,
-}: PageProps<"/profile">) {
-  const query = await searchParams;
+export default async function ProfilePage() {
   const session = await getSession();
   if (!session) redirect("/login?next=/profile");
 
@@ -44,8 +40,22 @@ export default async function ProfilePage({
         {session.profile.full_name || "Your profile"}
       </h1>
       <p className="mt-2 text-ink-soft">
-        {session.email}
-        {session.profile.batch ? `, batch ${session.profile.batch}` : ""}
+        {[
+          session.profile.roll_number,
+          sectionLabel(
+            session.profile.program,
+            session.profile.current_semester,
+            session.profile.section,
+          ),
+          session.email,
+        ]
+          .filter(Boolean)
+          .join(", ")}
+      </p>
+      <p className="mt-2 text-sm">
+        <Link href="/onboarding?next=%2Fprofile" className="font-semibold underline">
+          {session.profile.roll_number ? "Edit your FAST details" : "Set up your FAST profile"}
+        </Link>
       </p>
 
       <p className="mt-6 text-lg">
@@ -100,65 +110,6 @@ export default async function ProfilePage({
         ))}
       </ul>
 
-      <section className="mt-12 max-w-xl">
-        <h2 className="font-display text-xl font-bold">Your details</h2>
-        <p className="mt-1 text-sm text-ink-soft">
-          Your campus decides which university the site opens on for you.
-        </p>
-        <ErrorNote message={one(query.error)} />
-        {one(query.saved) && (
-          <p role="status" className="my-4 rounded bg-hi p-3 text-sm font-medium">
-            Saved.
-          </p>
-        )}
-        <form action={updateProfile} className="mt-3 grid gap-4">
-          <label className="grid gap-1 text-sm font-medium">
-            Full name
-            <input
-              name="full_name"
-              required
-              minLength={2}
-              maxLength={80}
-              defaultValue={session.profile.full_name}
-              className="field"
-            />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm font-medium">
-              Batch
-              <input
-                name="batch"
-                maxLength={20}
-                defaultValue={session.profile.batch ?? ""}
-                placeholder="Such as 2025"
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm font-medium">
-              Campus
-              <select
-                name="campus_id"
-                defaultValue={session.profile.campus_id ?? ""}
-                className="field"
-              >
-                <option value="">Not set</option>
-                {[...byUniversity.entries()].map(([name, list]) => (
-                  <optgroup key={name} label={name}>
-                    {list.map((campus) => (
-                      <option key={campus.id} value={campus.id}>
-                        {name} {campus.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div>
-            <button className="btn">Save details</button>
-          </div>
-        </form>
-      </section>
     </>
   );
 }

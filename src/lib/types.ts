@@ -74,6 +74,23 @@ export type Profile = {
   batch: string | null;
   campus_id: string | null;
   role: "student" | "admin";
+  roll_number: string | null;
+  program: string | null;
+  section: string | null;
+  current_semester: number | null;
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  notes: string | null;
+  course_id: string | null;
+  group_label: string | null;
+  due_at: string | null;
+  done: boolean;
+  source: "manual" | "classroom";
+  link: string | null;
+  created_at: string;
 };
 
 export type Thread = {

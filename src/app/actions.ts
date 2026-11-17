@@ -8,6 +8,8 @@ import { isConfigured } from "@/lib/config";
 import { indexResource } from "@/lib/indexing";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { isResourceType, isTeamKind } from "@/lib/types";
+import { isProgram, parseRollNumber } from "@/lib/fast";
+import { revokeGoogle, syncClassroom } from "@/lib/classroom";
 
 /** Only allow redirects back into this site. */
 function safeNext(value: FormDataEntryValue | null) {
@@ -43,14 +45,20 @@ export async function signIn(formData: FormData) {
   if (!isConfigured) loginError("Sign-in is not connected yet.", "signin", next);
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: text(formData, "email"),
     password: String(formData.get("password") ?? ""),
   });
   if (error) loginError(error.message, "signin", next);
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("roll_number")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
   revalidatePath("/", "layout");
-  redirect(next);
+  redirect(profile?.roll_number ? next : `/onboarding?next=${encodeURIComponent(next)}`);
 }
 
 export async function signUp(formData: FormData) {
@@ -88,7 +96,7 @@ export async function signUp(formData: FormData) {
     );
   }
   revalidatePath("/", "layout");
-  redirect(next);
+  redirect(`/onboarding?next=${encodeURIComponent(next)}`);
 }
 
 export async function signOut() {
@@ -478,4 +486,136 @@ export async function askAssistant(
       error: askError instanceof Error ? askError.message : "The assistant failed.",
     };
   }
+}
+
+// ---------- FAST profile ----------
+
+export async function saveFastProfile(formData: FormData) {
+  const session = await requireSession("/onboarding");
+  const next = safeNext(formData.get("next"));
+  const back = (msg: string): never =>
+    redirect(`/onboarding?next=${encodeURIComponent(next)}&error=${encodeURIComponent(msg)}`);
+
+  const fullName = text(formData, "full_name");
+  const roll = parseRollNumber(text(formData, "roll_number"));
+  const program = text(formData, "program");
+  const semester = Number(text(formData, "current_semester"));
+  const section = text(formData, "section").toUpperCase();
+
+  if (fullName.length < 2 || fullName.length > 80) back("Enter your full name.");
+  if (!roll) back("Enter your roll number the way FAST writes it, such as 23I-0567.");
+  if (!isProgram(program)) back("Choose your degree program.");
+  if (!Number.isInteger(semester) || semester < 1 || semester > 8)
+    back("Choose the semester you are in now.");
+  if (!/^[A-Z]{1,2}$/.test(section)) back("Enter your section letter, such as A.");
+
+  const supabase = await createClient();
+  const { data: campus } = await supabase
+    .from("campuses")
+    .select("id, universities!inner(slug)")
+    .eq("slug", roll!.campus.slug)
+    .eq("universities.slug", "fast-nuces")
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      roll_number: roll!.value,
+      batch: String(roll!.year),
+      campus_id: campus?.id ?? null,
+      program,
+      current_semester: semester,
+      section,
+    })
+    .eq("id", session.userId);
+  if (error) {
+    back(
+      error.code === "23505"
+        ? `${roll!.value} is already registered. If it is yours, contact the site admin.`
+        : `Could not save your profile: ${error.message}`,
+    );
+  }
+
+  revalidatePath("/", "layout");
+  redirect(next === "/" ? "/tasks" : next);
+}
+
+// ---------- Tasks and reminders ----------
+
+export async function addTask(formData: FormData) {
+  const session = await requireSession("/tasks");
+  const title = text(formData, "title");
+  if (title.length < 1 || title.length > 200) back("/tasks", "Give the task a title.");
+
+  const date = text(formData, "due_date");
+  const time = text(formData, "due_time") || "23:59";
+  // Students enter Pakistan time (UTC+5); store as an absolute moment.
+  const dueAt = date ? new Date(`${date}T${time}:00+05:00`) : null;
+  if (dueAt && Number.isNaN(dueAt.getTime())) back("/tasks", "That due date is not valid.");
+
+  const courseId = text(formData, "course_id");
+  const supabase = await createClient();
+  let groupLabel: string | null = null;
+  if (courseId) {
+    const { data: course } = await supabase
+      .from("courses")
+      .select("code, title")
+      .eq("id", courseId)
+      .maybeSingle();
+    groupLabel = course ? `${course.code} ${course.title}` : null;
+  }
+
+  const { error } = await supabase.from("tasks").insert({
+    user_id: session.userId,
+    title,
+    notes: text(formData, "notes").slice(0, 2000) || null,
+    course_id: courseId || null,
+    group_label: groupLabel,
+    due_at: dueAt?.toISOString() ?? null,
+  });
+  if (error) back("/tasks", `Could not add the task: ${error.message}`);
+  revalidatePath("/", "layout");
+}
+
+export async function setTaskDone(taskId: string, done: boolean) {
+  await requireSession("/tasks");
+  const supabase = await createClient();
+  await supabase.from("tasks").update({ done }).eq("id", taskId);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteTask(taskId: string) {
+  await requireSession("/tasks");
+  const supabase = await createClient();
+  await supabase.from("tasks").delete().eq("id", taskId).eq("source", "manual");
+  revalidatePath("/", "layout");
+}
+
+export async function syncClassroomNow() {
+  const session = await requireSession("/tasks");
+  const supabase = await createClient();
+  let result: { items: number; courses: number };
+  try {
+    result = await syncClassroom(supabase, session.userId);
+  } catch (error) {
+    back("/tasks", error instanceof Error ? error.message : "Sync failed.");
+  }
+  revalidatePath("/", "layout");
+  redirect(`/tasks?synced=${result.items}&courses=${result.courses}`);
+}
+
+export async function disconnectClassroom() {
+  const session = await requireSession("/tasks");
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("google_connections")
+    .select("refresh_token")
+    .eq("user_id", session.userId)
+    .maybeSingle();
+  if (data?.refresh_token) await revokeGoogle(data.refresh_token);
+  await supabase.from("google_connections").delete().eq("user_id", session.userId);
+  // Classroom items stay in the list; they just stop updating.
+  revalidatePath("/tasks");
+  redirect("/tasks");
 }

@@ -1,19 +1,53 @@
 import { getVercelOidcToken } from "@vercel/oidc";
 
-// The study assistant. On Vercel it runs through Vercel AI Gateway using
-// the deployment's own OIDC token, so no API key is needed. Locally, set
-// AI_GATEWAY_API_KEY, or ANTHROPIC_API_KEY to call Anthropic directly.
+// The study assistant. Providers, first one configured wins:
+//   ANTHROPIC_API_KEY   Anthropic directly
+//   GEMINI_API_KEY      Google Gemini (has a free tier, no card needed)
+//   AI_GATEWAY_API_KEY  Vercel AI Gateway with a key
+//   on Vercel           Vercel AI Gateway with the deployment's OIDC token
+//                       (needs a card on the Vercel account to unlock credits)
 
 export const AI_DAILY_LIMIT = 20;
 const GATEWAY_MODEL = process.env.AI_MODEL || "anthropic/claude-haiku-5.5";
 const ANTHROPIC_MODEL = process.env.AI_MODEL || "claude-haiku-5-5";
 
+const GEMINI_MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-2.5-flash"];
+
 export function isAssistantEnabled() {
   return Boolean(
     process.env.ANTHROPIC_API_KEY ||
+      process.env.GEMINI_API_KEY ||
       process.env.AI_GATEWAY_API_KEY ||
       process.env.VERCEL,
   );
+}
+
+const NOT_SET_UP =
+  "The study assistant is not switched on yet. The site owner needs to finish setting it up.";
+
+async function openAiCompatible(
+  url: string,
+  token: string,
+  model: string,
+  user: string,
+): Promise<Response> {
+  return fetch(url, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      max_tokens: 1000,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+}
+
+async function readChoice(response: Response) {
+  const json = (await response.json()) as { choices: { message: { content: string | null } }[] };
+  return (json.choices[0]?.message.content ?? "").trim();
 }
 
 export type Excerpt = {
@@ -78,6 +112,27 @@ export async function answerQuestion(
       .map((b) => b.text ?? "")
       .join("\n")
       .trim();
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    let last = "";
+    for (const model of [...new Set(GEMINI_MODELS)]) {
+      const response = await openAiCompatible(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        process.env.GEMINI_API_KEY,
+        model,
+        user,
+      );
+      if (response.ok) return readChoice(response);
+      last = await response.text();
+      console.error("Gemini request failed", model, response.status, last);
+      if (response.status === 401 || response.status === 403) throw new Error(NOT_SET_UP);
+      if (response.status === 429) {
+        throw new Error("The assistant is busy right now. Try again in a minute.");
+      }
+      // 400/404: model name not available on this key; try the next one.
+    }
+    throw new Error("The assistant could not answer right now. Try again in a minute.");
   }
 
   const token = process.env.AI_GATEWAY_API_KEY || (await getVercelOidcToken());

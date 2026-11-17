@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { MobileMenu } from "@/components/MobileMenu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AUTHOR_GITHUB, AUTHOR_LINKEDIN, isConfigured } from "@/lib/config";
+import { countDueSoon } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s | Sabaq",
   },
   description:
-    "Notes, past papers, course discussions, a study assistant and a team finder for FAST-NUCES students, and for students at universities across Pakistan.",
+    "Notes, past papers, a study assistant, assignment reminders with Google Classroom sync, and a team finder for FAST-NUCES BS CS, SE, AI, DS and Cyber Security students.",
 };
 
 export const viewport: Viewport = {
@@ -33,12 +34,16 @@ const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
+  const dueSoon = session ? await countDueSoon(session.userId) : 0;
   const year = new Date().getFullYear();
 
   const links = [
-    { href: "/u/fast-nuces", label: "FAST-NUCES" },
+    { href: "/u/fast-nuces", label: "Courses" },
     { href: "/assistant", label: "Assistant" },
-    { href: "/universities", label: "Universities" },
+    {
+      href: "/tasks",
+      label: dueSoon > 0 ? `My work (${dueSoon} due)` : "My work",
+    },
     { href: "/teams", label: "Teams" },
   ];
   const accountLinks = [
@@ -77,7 +82,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 className="hidden items-center gap-5 text-sm font-medium md:flex"
               >
                 {[...links, ...accountLinks].map((link) => (
-                  <Link key={link.href} href={link.href} className="hover:underline">
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={
+                      link.href === "/tasks" && dueSoon > 0
+                        ? "font-semibold text-margin hover:underline"
+                        : "hover:underline"
+                    }
+                  >
                     {link.label}
                   </Link>
                 ))}
@@ -120,8 +133,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/assistant" className="text-ink-soft hover:text-ink hover:underline">
                 Study assistant
               </Link>
-              <Link href="/universities" className="text-ink-soft hover:text-ink hover:underline">
-                All universities
+              <Link href="/tasks" className="text-ink-soft hover:text-ink hover:underline">
+                My work
               </Link>
               <Link href="/teams" className="text-ink-soft hover:text-ink hover:underline">
                 Team finder

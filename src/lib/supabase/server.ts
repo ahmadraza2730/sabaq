@@ -44,7 +44,9 @@ export const getSession = cache(async (): Promise<Session | null> => {
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, batch, campus_id, role, campuses(universities(slug))")
+    .select(
+      "id, full_name, batch, campus_id, role, roll_number, program, section, current_semester, campuses(universities(slug))",
+    )
     .eq("id", user.id)
     .maybeSingle();
 
@@ -61,8 +63,22 @@ export const getSession = cache(async (): Promise<Session | null> => {
         batch: row.batch,
         campus_id: row.campus_id,
         role: row.role,
+        roll_number: row.roll_number,
+        program: row.program,
+        section: row.section,
+        current_semester: row.current_semester,
       }
-    : { id: user.id, full_name: "", batch: null, campus_id: null, role: "student" };
+    : {
+        id: user.id,
+        full_name: "",
+        batch: null,
+        campus_id: null,
+        role: "student",
+        roll_number: null,
+        program: null,
+        section: null,
+        current_semester: null,
+      };
 
   return {
     userId: user.id,
