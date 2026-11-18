@@ -91,6 +91,7 @@ export type Task = {
   source: "manual" | "classroom";
   link: string | null;
   created_at: string;
+  other_section?: boolean;
 };
 
 export type Thread = {

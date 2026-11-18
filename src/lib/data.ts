@@ -212,7 +212,7 @@ export async function listTasks(userId: string): Promise<Task[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, title, notes, course_id, group_label, due_at, done, source, link, created_at")
+    .select("id, title, notes, course_id, group_label, due_at, done, source, link, created_at, other_section")
     .eq("user_id", userId)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(500);
@@ -230,6 +230,7 @@ export async function countDueSoon(userId: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("done", false)
+    .eq("other_section", false)
     .lte("due_at", soon);
   return count ?? 0;
 }
@@ -239,7 +240,7 @@ export async function getGoogleConnection(userId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("google_connections")
-    .select("google_email, connected_at, last_synced_at, calendar_enabled")
+    .select("google_email, connected_at, last_synced_at, calendar_enabled, scopes")
     .eq("user_id", userId)
     .maybeSingle();
   return data as {
@@ -247,6 +248,7 @@ export async function getGoogleConnection(userId: string) {
     connected_at: string;
     last_synced_at: string | null;
     calendar_enabled: boolean;
+    scopes: string | null;
   } | null;
 }
 
@@ -439,4 +441,63 @@ export async function listTeamPosts(options: {
     author_name: row.profiles?.full_name ?? null,
     university_short_name: row.universities?.short_name ?? null,
   }));
+}
+
+// ---------- Classroom files ----------
+
+export type ClassroomFile = {
+  id: number;
+  classroom_course: string;
+  source: "material" | "announcement" | "assignment";
+  post_title: string | null;
+  topic: string | null;
+  title: string;
+  url: string;
+  file_type: "slides" | "pdf" | "doc" | "sheet" | "video" | "link" | "form" | "file";
+  post_link: string | null;
+  posted_at: string | null;
+};
+
+export type ClassroomClass = {
+  external_id: string;
+  name: string;
+  section: string | null;
+  link: string | null;
+  course_id: string | null;
+};
+
+export async function listClassroomClasses(userId: string): Promise<ClassroomClass[]> {
+  if (!isConfigured) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("classroom_courses")
+    .select("external_id, name, section, link, course_id")
+    .eq("user_id", userId)
+    .order("name");
+  return (data ?? []) as ClassroomClass[];
+}
+
+/** Files from the student's Classroom classes, optionally only those matched to one Sabaq course. */
+export async function listClassroomFiles(userId: string, courseId?: string): Promise<ClassroomFile[]> {
+  if (!isConfigured) return [];
+  const supabase = await createClient();
+  let classIds: string[] | null = null;
+  if (courseId) {
+    const { data } = await supabase
+      .from("classroom_courses")
+      .select("external_id")
+      .eq("user_id", userId)
+      .eq("course_id", courseId);
+    classIds = (data ?? []).map((r) => r.external_id as string);
+    if (classIds.length === 0) return [];
+  }
+  let query = supabase
+    .from("classroom_materials")
+    .select("id, classroom_course, source, post_title, topic, title, url, file_type, post_link, posted_at")
+    .eq("user_id", userId)
+    .order("posted_at", { ascending: false, nullsFirst: false })
+    .limit(2000);
+  if (classIds) query = query.in("classroom_course", classIds);
+  const { data } = await query;
+  return (data ?? []) as ClassroomFile[];
 }

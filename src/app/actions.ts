@@ -604,17 +604,28 @@ export async function deleteTask(taskId: string) {
   revalidatePath("/", "layout");
 }
 
+function syncQuery(r: Awaited<ReturnType<typeof syncClassroom>>) {
+  const q = new URLSearchParams({
+    synced: String(r.items),
+    courses: String(r.courses),
+    other: String(r.otherSection),
+    events: String(r.events),
+  });
+  if (r.files !== null) q.set("files", String(r.files));
+  return q.toString();
+}
+
 export async function syncClassroomNow() {
   const session = await requireSession("/tasks");
   const supabase = await createClient();
-  let result: { items: number; courses: number; events: number };
+  let result: Awaited<ReturnType<typeof syncClassroom>>;
   try {
     result = await syncClassroom(supabase, session.userId);
   } catch (error) {
     back("/tasks", error instanceof Error ? error.message : "Sync failed.");
   }
   revalidatePath("/", "layout");
-  redirect(`/tasks?synced=${result.items}&courses=${result.courses}&events=${result.events}`);
+  redirect(`/tasks?${syncQuery(result)}`);
 }
 
 export async function disconnectClassroom() {

@@ -13,6 +13,11 @@ export function CourseTabs({ base }: { base: string }) {
       active: pathname.startsWith(`${base}/discuss`),
     },
     {
+      href: `${base}/slides`,
+      label: "My slides",
+      active: pathname.startsWith(`${base}/slides`),
+    },
+    {
       href: `${base}/ask`,
       label: "Ask the notes",
       active: pathname.startsWith(`${base}/ask`),
@@ -22,7 +27,7 @@ export function CourseTabs({ base }: { base: string }) {
   return (
     <nav
       aria-label="Course sections"
-      className="mt-6 flex gap-6 border-b border-rule text-sm font-semibold"
+      className="mt-6 flex gap-6 overflow-x-auto whitespace-nowrap border-b border-rule text-sm font-semibold"
     >
       {tabs.map((tab) => (
         <Link

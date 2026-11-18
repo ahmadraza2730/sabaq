@@ -9,13 +9,15 @@ import {
   syncClassroomNow,
 } from "@/app/actions";
 import { ErrorNote, one } from "@/components/ErrorNote";
+import { WorkTabs } from "@/components/WorkTabs";
 import { isClassroomConfigured } from "@/lib/classroom";
 import { getGoogleConnection, listProgramRoadmap, listTasks } from "@/lib/data";
-import { isProgram } from "@/lib/fast";
+import { isProgram, sectionLabel } from "@/lib/fast";
 import { getSession } from "@/lib/supabase/server";
 import type { Task } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export const metadata: Metadata = { title: "My work" };
 
 const TZ = "Asia/Karachi";
@@ -128,6 +130,7 @@ function TaskRow({ task }: { task: Task }) {
         <span className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft">
           {task.group_label && <span>{task.group_label}</span>}
           {task.source === "classroom" && <span>From Classroom</span>}
+          {task.other_section && <span className="font-semibold">Other section</span>}
           {calendar && !task.done && (
             <a href={calendar} rel="noopener noreferrer" className="underline">
               Add to Google Calendar
@@ -158,7 +161,13 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
     getGoogleConnection(session.userId),
     listProgramRoadmap(program),
   ]);
-  const { open, done } = groupTasks(tasks);
+  const showOther = one(query.sections) === "all";
+  const otherCount = tasks.filter((t) => t.other_section && !t.done).length;
+  const { open, done } = groupTasks(showOther ? tasks : tasks.filter((t) => !t.other_section));
+  const mySection =
+    session.profile.section && session.profile.current_semester
+      ? sectionLabel(program, session.profile.current_semester, session.profile.section)
+      : null;
   const semester = session.profile.current_semester;
   const myCourses = roadmap.filter((c) => c.semester === semester);
   const otherCourses = roadmap.filter((c) => c.semester !== semester);
@@ -179,11 +188,42 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
         </div>
       </div>
 
+      <WorkTabs active="work" />
+
+      {connection && (
+        <p className="mt-4 text-sm text-ink-soft">
+          {mySection ? (
+            <>
+              Showing Classroom work for <span className="font-semibold text-ink">{mySection}</span>.{" "}
+              {otherCount > 0 &&
+                (showOther ? (
+                  <Link href="/tasks" className="underline">
+                    Hide work for other sections
+                  </Link>
+                ) : (
+                  <Link href="/tasks?sections=all" className="underline">
+                    Show {otherCount} {otherCount === 1 ? "item" : "items"} for other sections
+                  </Link>
+                ))}
+            </>
+          ) : (
+            <>
+              <Link href="/onboarding?next=%2Ftasks" className="font-semibold underline">
+                Add your section
+              </Link>{" "}
+              to hide Classroom work meant for other sections.
+            </>
+          )}
+        </p>
+      )}
+
       <ErrorNote message={one(query.error)} />
       {synced && (
         <p role="status" className="my-4 rounded bg-hi p-3 text-sm font-medium">
-          Synced {synced} {synced === "1" ? "item" : "items"} from{" "}
+          Synced {synced} {synced === "1" ? "item" : "items"} for your section from{" "}
           {one(query.courses)} Classroom {one(query.courses) === "1" ? "class" : "classes"}.
+          {Number(one(query.other) ?? 0) > 0 && ` ${one(query.other)} for other sections are hidden.`}
+          {one(query.files) && ` ${one(query.files)} files are in Slides and files.`}
           {Number(one(query.events) ?? 0) > 0 &&
             ` Updated ${one(query.events)} Google Calendar ${one(query.events) === "1" ? "event" : "events"}.`}
         </p>
@@ -311,6 +351,13 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
                     ? `Last synced ${formatDue(connection.last_synced_at)}.`
                     : "Not synced yet."}
                 </p>
+                {connection.scopes !== "files" && (
+                  <p className="mt-2 rounded bg-hi p-2 text-sm">
+                    To load your Classroom slides and use section filtering on
+                    files, disconnect and connect again so Google can ask for
+                    the new permissions.
+                  </p>
+                )}
                 <p className="mt-2 text-sm text-ink-soft">
                   {connection.calendar_enabled
                     ? "Open work with a due date is also in the \u201cSabaq due dates\u201d calendar in your Google Calendar, with reminders a day and two hours before."

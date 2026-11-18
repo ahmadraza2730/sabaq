@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { exchangeCode, syncClassroom } from "@/lib/classroom";
 import { createClient, getSession } from "@/lib/supabase/server";
 
+export const maxDuration = 60;
+
 // Google sends the student back here after they allow access.
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -41,7 +43,13 @@ export async function GET(request: NextRequest) {
 
     const result = await syncClassroom(supabase, session.userId);
     return NextResponse.redirect(
-      `${origin}/tasks?synced=${result.items}&courses=${result.courses}&events=${result.events}`,
+      `${origin}/tasks?${new URLSearchParams({
+        synced: String(result.items),
+        courses: String(result.courses),
+        other: String(result.otherSection),
+        events: String(result.events),
+        ...(result.files !== null ? { files: String(result.files) } : {}),
+      })}`,
     );
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Connecting Classroom failed.");
