@@ -25,8 +25,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdfefd" },
-    { media: "(prefers-color-scheme: dark)", color: "#151f33" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f1f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b080d" },
   ],
 };
 
@@ -40,6 +40,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   const links = [
     { href: "/u/fast-nuces", label: "Courses" },
+    { href: "/past-papers", label: "Past papers" },
     { href: "/practice", label: "Practice" },
     { href: "/assistant", label: "Assistant" },
     {
@@ -132,6 +133,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <p className="font-semibold">Browse</p>
               <Link href="/u/fast-nuces" className="text-ink-soft hover:text-ink hover:underline">
                 FAST-NUCES courses
+              </Link>
+              <Link href="/past-papers" className="text-ink-soft hover:text-ink hover:underline">
+                FAST past papers
               </Link>
               <Link href="/practice" className="text-ink-soft hover:text-ink hover:underline">
                 Coding practice

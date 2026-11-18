@@ -43,6 +43,12 @@ const TOOLS = [
     text: "Ask about a lecture, an assignment or a past paper and get answers from students who took it.",
   },
   {
+    label: "Past papers",
+    title: "500+ FAST sessionals, mids and finals",
+    text: "From the student-run FAST Islamabad archive, sorted onto each course page, many with solutions.",
+    href: "/past-papers",
+  },
+  {
     label: "Practice",
     title: "Coding practice with a built-in compiler",
     text: "PF, OOP and DSA problems in the style of LeetCode. Write C++ or Java in the browser, run it, and submit against hidden tests.",

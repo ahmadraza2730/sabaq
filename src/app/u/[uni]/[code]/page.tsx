@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArchiveCredit, PastPaperList } from "@/components/PastPaperList";
 import { ResourceLine } from "@/components/ResourceLine";
+import { pastPapersForCourse } from "@/lib/pastPapers";
 import { getCourse, listMyVotes, listResources } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import { TYPE_PLURALS, isResourceType, type ResourceType } from "@/lib/types";
@@ -20,9 +22,10 @@ export default async function CourseFilesPage({ params, searchParams }: Props) {
   if (!course) notFound();
 
   const type = isResourceType(query.type) ? query.type : undefined;
-  const [resources, session] = await Promise.all([
+  const [resources, session, archive] = await Promise.all([
     listResources(course.id, type),
     getSession(),
+    type && type !== "past_paper" ? Promise.resolve([]) : pastPapersForCourse(course.code),
   ]);
   const myVotes = session ? await listMyVotes(session.userId) : new Set<string>();
 
@@ -60,6 +63,21 @@ export default async function CourseFilesPage({ params, searchParams }: Props) {
         </Link>
       </div>
 
+      {archive.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <h2 className="font-display text-2xl font-bold">
+              Past papers <span className="text-base font-normal tabular-nums text-ink-soft">{archive.length}</span>
+            </h2>
+            <ArchiveCredit />
+          </div>
+          <PastPaperList papers={archive} />
+        </section>
+      )}
+
+      {archive.length > 0 && (
+        <h2 className="mb-4 font-display text-2xl font-bold">Uploaded by students on Sabaq</h2>
+      )}
       {resources.length > 0 ? (
         <ul className="sheet">
           {resources.map((resource) => (

@@ -3,39 +3,39 @@
 /* Dark mode follows a .dark class on <html>, set before first paint. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Sabaq: a ruled notebook, sharpened. Cool blue-grey paper, ballpoint
-   ultramarine as the working colour, a coral margin line, and the yellow
-   highlighter kept for the one thing that matters. */
+/* Sabaq: a ruled notebook in red ink. Crimson-to-vermilion is the working
+   colour, deep navy carries the text, the margin line stays red and a gold
+   highlighter marks the one thing that matters. */
 @theme {
-  --color-paper: #eceff7;
+  --color-paper: #f4f1f4;
   --color-sheet: #ffffff;
-  --color-ink: #0c1633;
-  --color-ink-soft: #56627f;
-  --color-rule: #d5dcea;
-  --color-margin: #ff4f5e;
-  --color-hi: #ffe24a;
+  --color-ink: #141428;
+  --color-ink-soft: #5f5a6e;
+  --color-rule: #e6dfe5;
+  --color-margin: #e8173f;
+  --color-hi: #ffd23d;
   --color-ok: #0f8a5f;
-  --color-ultra: #2f45ff;
-  --color-ultra-2: #7b3dff;
-  --color-glow: rgba(47, 69, 255, 0.28);
+  --color-ultra: #d6143d;
+  --color-ultra-2: #ff5a2e;
+  --color-glow: rgba(214, 20, 61, 0.3);
 
   --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Night notebook: midnight paper, chalk ink, the ultramarine glowing. */
+/* Night: wine-black paper, warm white ink, the red glowing. */
 html.dark {
-  --color-paper: #060a17;
-  --color-sheet: #0d1428;
-  --color-ink: #e8edfb;
-  --color-ink-soft: #94a1c2;
-  --color-rule: #1e2945;
-  --color-margin: #ff6b77;
-  --color-hi: #5c4a0a;
+  --color-paper: #0b080d;
+  --color-sheet: #151017;
+  --color-ink: #f6eef1;
+  --color-ink-soft: #b3a5ae;
+  --color-rule: #2d2129;
+  --color-margin: #ff4d6a;
+  --color-hi: #6b4c06;
   --color-ok: #4fd39c;
-  --color-ultra: #7d8cff;
-  --color-ultra-2: #b38cff;
-  --color-glow: rgba(125, 140, 255, 0.35);
+  --color-ultra: #ff3b5c;
+  --color-ultra-2: #ff8a4c;
+  --color-glow: rgba(255, 59, 92, 0.38);
   color-scheme: dark;
 }
 
