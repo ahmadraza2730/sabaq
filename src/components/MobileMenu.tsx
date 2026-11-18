@@ -17,7 +17,7 @@ export function MobileMenu({
   const pathname = usePathname();
 
   return (
-    <details key={pathname} className="group relative md:hidden">
+    <details key={pathname} className="group relative lg:hidden">
       <summary
         className="grid size-9 cursor-pointer list-none place-items-center rounded border border-rule bg-sheet hover:border-ink [&::-webkit-details-marker]:hidden"
         aria-label="Menu"

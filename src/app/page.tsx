@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CountUp } from "@/components/Effects";
 import { HeroArt } from "@/components/HeroArt";
 import { Reveal } from "@/components/Reveal";
 import { Scramble } from "@/components/Scramble";
@@ -12,6 +13,8 @@ import {
   listUniversities,
 } from "@/lib/data";
 import { PROGRAMS, PROGRAM_CODES, isProgram, sectionLabel } from "@/lib/fast";
+import { listPastPapers } from "@/lib/pastPapers";
+import { listProblems } from "@/lib/practice";
 import { getSession } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -84,11 +87,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       ? session.profile.program
       : "CS";
 
-  const [roadmapCourses, slots, dueSoon] = await Promise.all([
+  const [roadmapCourses, slots, dueSoon, papers] = await Promise.all([
     listProgramRoadmap(program),
     fast ? listElectiveSlots(fast.id, program) : Promise.resolve([]),
     session ? countDueSoon(session.userId) : Promise.resolve(0),
+    listPastPapers().catch(() => []),
   ]);
+  const stats = [
+    { value: papers.filter((p) => p.kind !== "Course outline").length, suffix: "+", label: "past papers, many solved" },
+    { value: listProblems().length, suffix: "", label: "practice problems with a compiler" },
+    { value: 5, suffix: "", label: "BS programs, all eight semesters" },
+    { value: 6, suffix: "", label: "FAST campuses" },
+  ];
   const profile = session?.profile;
   const section = profile
     ? sectionLabel(profile.program, profile.current_semester, profile.section)
@@ -233,13 +243,29 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </Reveal>
       </section>
 
+      <Reveal as="ul" className="mb-16 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map((s) => (
+          <li key={s.label} className="spot sheet sheet-tight relative p-5 pl-7">
+            <span className="stat-number ink-gradient block text-4xl sm:text-5xl">
+              <CountUp value={s.value} suffix={s.suffix} />
+            </span>
+            <span className="mt-2 block text-sm text-ink-soft">{s.label}</span>
+          </li>
+        ))}
+      </Reveal>
+
       <section className="pb-14">
         <h2 className="mb-5 font-display text-2xl font-bold sm:text-3xl">
           Everything a FAST semester needs
         </h2>
         <Reveal as="ul" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {TOOLS.map((tool) => (
-            <li key={tool.label} className="lift sheet sheet-tight relative p-5 pl-7 hover:border-ink">
+          {TOOLS.map((tool, i) => (
+            <li
+              key={tool.label}
+              className={`lift sheet sheet-tight relative p-5 pl-7 hover:border-ink ${
+                i === 0 || i === 3 ? "lg:col-span-2" : ""
+              } ${i === 0 || i === 3 ? "lg:p-7 lg:pl-9" : ""}`}
+            >
               <span className="text-xs font-bold text-margin">{tool.label}</span>
               <span className="mt-1 block font-display text-lg font-bold leading-snug">
                 {tool.href ? (

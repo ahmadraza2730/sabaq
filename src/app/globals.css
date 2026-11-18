@@ -412,3 +412,77 @@ body {
   background-clip: text;
   color: transparent;
 }
+
+/* ---------- Advanced touches ---------- */
+
+/* Cursor spotlight on cards. */
+.lift,
+.spot {
+  isolation: isolate;
+}
+.lift::after,
+.spot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    22rem circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--color-ultra) 16%, transparent),
+    transparent 60%
+  );
+}
+.lift:hover::after,
+.spot:hover::after {
+  opacity: 1;
+}
+
+/* Page-load bar. */
+.nav-progress {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 80;
+  height: 3px;
+  width: 0;
+  opacity: 0;
+  background: linear-gradient(90deg, var(--color-ultra), var(--color-ultra-2), var(--color-hi));
+  box-shadow: 0 0 12px var(--color-glow);
+  pointer-events: none;
+}
+.nav-progress[data-state="loading"] {
+  opacity: 1;
+  width: 80%;
+  transition: width 8s cubic-bezier(0.1, 0.8, 0.2, 1), opacity 0.1s;
+}
+.nav-progress[data-state="done"] {
+  opacity: 0;
+  width: 100%;
+  transition: width 0.2s ease, opacity 0.35s 0.15s ease;
+}
+
+/* Command palette entrance. */
+@keyframes palette-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .palette-panel { animation: palette-in 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+}
+
+/* Stats: big gradient numbers. */
+.stat-number {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+/* Leave room for the phone tab bar. */
+@media (max-width: 767px) {
+  body { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+}
