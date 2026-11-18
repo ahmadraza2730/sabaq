@@ -58,7 +58,7 @@ export function Scramble({
   return (
     <span className="relative inline-block">
       <span className="invisible">{text}</span>
-      <span aria-hidden="true" className={`absolute inset-0 ${className}`}>
+      <span aria-hidden="true" className={`absolute left-0 right-0 top-0 ${className}`}>
         {shown}
       </span>
       <span className="sr-only">{text}</span>
