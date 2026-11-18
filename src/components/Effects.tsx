@@ -89,7 +89,8 @@ export function CountUp({ value, suffix = "" }: { value: number; suffix?: string
   useEffect(() => {
     const el = ref.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    setShown(0);
+    // Only count when the number starts below the fold; otherwise just show it.
+    if (el.getBoundingClientRect().top < window.innerHeight) return;
     let id = 0;
     const io = new IntersectionObserver(
       ([entry]) => {

@@ -176,7 +176,7 @@ export function CommandPalette() {
             aria-controls="palette-list"
             aria-activedescendant={results[active] ? `palette-${active}` : undefined}
             placeholder="Search courses, past papers, practice..."
-            className="w-full bg-transparent text-base outline-none placeholder:text-ink-soft"
+            className="w-full bg-transparent text-base outline-none placeholder:text-ink-soft focus-visible:outline-none"
           />
           <kbd className="hidden rounded border border-rule px-1.5 py-0.5 text-xs text-ink-soft sm:block">Esc</kbd>
         </div>
