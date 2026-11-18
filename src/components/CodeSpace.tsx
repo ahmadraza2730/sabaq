@@ -89,6 +89,7 @@ function readColors() {
     rule: v("--color-rule", "#c5d3e4"),
     margin: v("--color-margin", "#e0616f"),
     hi: v("--color-hi", "#ffe45c"),
+    ultra: v("--color-ultra", "#2f45ff"),
     dark: document.documentElement.classList.contains("dark"),
   };
 }
@@ -235,7 +236,7 @@ export function CodeSpace({ density = 1 }: { density?: number }) {
       if (alpha <= 0.01) return;
       const decode = still ? 1 : Math.min(1, (now - it.born) / 900);
       const size = Math.max(6, Math.min(40, 13 * p.f));
-      const tintColor = it.tint === 1 ? colors.margin : it.tint === 2 ? colors.ink : colors.ink;
+      const tintColor = it.kind === "card" ? colors.ink : it.tint === 1 ? colors.margin : it.tint === 0 && it.title.length % 3 === 0 ? colors.ultra : colors.ink;
 
       if (it.kind === "card") {
         ctx!.font = `700 ${size}px 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif`;
@@ -261,7 +262,7 @@ export function CodeSpace({ density = 1 }: { density?: number }) {
         ctx!.lineWidth = Math.max(0.5, p.f * 0.8);
         ctx!.stroke();
         // Margin line, like every sheet on the site.
-        ctx!.fillStyle = colors.margin;
+        ctx!.fillStyle = it.tint === 1 ? colors.margin : colors.ultra;
         ctx!.globalAlpha = alpha * 0.85;
         ctx!.fillRect(x + size * 0.45, y, Math.max(1, p.f * 1.1), ch);
 

@@ -118,7 +118,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
 
-        <footer className="border-t border-rule bg-sheet">
+        <footer className="border-t border-rule bg-sheet/80 backdrop-blur-md">
           <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-10 text-sm sm:grid-cols-[1.4fr_1fr_1fr]">
             <div>
               <Logo />
@@ -174,30 +174,32 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <div className="border-t border-rule">
             <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-sm">
               <p className="text-ink-soft">© {year} Sabaq</p>
-              <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <div className="flex flex-wrap items-center gap-3">
                 <span>
                   Made by{" "}
-                  <span className="font-semibold underline decoration-margin decoration-2 underline-offset-4">
-                    Muhammad Ahmad
-                  </span>
+                  <span className="font-semibold">Muhammad Ahmad</span>
                 </span>
-                {AUTHOR_LINKEDIN && (
-                  <a
-                    href={AUTHOR_LINKEDIN}
-                    rel="noopener noreferrer"
-                    className="text-ink-soft hover:text-ink hover:underline"
-                  >
-                    LinkedIn
-                  </a>
-                )}
+                <a
+                  href={AUTHOR_LINKEDIN}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  className="btn h-9 px-3.5 py-0 text-sm"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Connect on LinkedIn
+                </a>
                 <a
                   href={AUTHOR_GITHUB}
                   rel="noopener noreferrer"
-                  className="text-ink-soft hover:text-ink hover:underline"
+                  target="_blank"
+                  className="btn btn-quiet h-9 px-3.5 py-0 text-sm"
                 >
                   GitHub
                 </a>
-              </p>
+              </div>
             </div>
           </div>
         </footer>

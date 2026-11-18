@@ -124,7 +124,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <span className="hi">
               <WordCycle words={["notes", "past papers", "slides", "lab tasks", "answers"]} />
             </span>
-            <Scramble text=", sorted by course." delay={200} />
+            <Scramble text=", sorted by course." delay={200} className="ink-gradient" />
           </h1>
           <p className="mt-5 max-w-xl text-lg text-ink-soft">
             Built for FAST-NUCES students in BS CS, SE, AI, DS and Cyber

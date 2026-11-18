@@ -32,7 +32,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <Reveal className="hidden lg:block">
           <p className="font-display text-sm font-bold text-margin">Sabaq, for FAST-NUCES</p>
           <h2 className="mt-3 font-display text-5xl font-extrabold leading-[1.02] tracking-tight">
-            <Scramble text="Your semester," />{" "}
+            <Scramble text="Your semester," className="ink-gradient" />{" "}
             <span className="hi">
               <Scramble text="already half written." delay={250} />
             </span>

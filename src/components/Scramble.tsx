@@ -43,12 +43,22 @@ export function useScramble(text: string, duration = 800, delay = 0) {
  * Text that decodes out of scrambled symbols when it first appears. The real
  * text sets the size (so nothing jumps) and is what screen readers read.
  */
-export function Scramble({ text, delay = 0, duration = 900 }: { text: string; delay?: number; duration?: number }) {
+export function Scramble({
+  text,
+  delay = 0,
+  duration = 900,
+  className = "",
+}: {
+  text: string;
+  delay?: number;
+  duration?: number;
+  className?: string;
+}) {
   const shown = useScramble(text, duration, delay);
   return (
     <span className="relative inline-block">
       <span className="invisible">{text}</span>
-      <span aria-hidden="true" className="absolute inset-0">
+      <span aria-hidden="true" className={`absolute inset-0 ${className}`}>
         {shown}
       </span>
       <span className="sr-only">{text}</span>
