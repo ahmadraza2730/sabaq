@@ -13,10 +13,9 @@ export function useScramble(text: string, duration = 800, delay = 0) {
       setShown(text);
       return;
     }
-    let raf = 0;
     const start = performance.now() + delay;
-    const tick = (now: number) => {
-      const p = Math.max(0, Math.min(1, (now - start) / duration));
+    const step = () => {
+      const p = Math.max(0, Math.min(1, (performance.now() - start) / duration));
       const fixed = Math.floor(text.length * p);
       let out = text.slice(0, fixed);
       for (let i = fixed; i < text.length; i++) {
@@ -24,10 +23,17 @@ export function useScramble(text: string, duration = 800, delay = 0) {
         out += c === " " || c === "," || c === "." ? c : GLYPHS[(Math.random() * GLYPHS.length) | 0];
       }
       setShown(out);
-      if (p < 1) raf = requestAnimationFrame(tick);
+      if (p >= 1) window.clearInterval(id);
     };
-    tick(performance.now());
-    return () => cancelAnimationFrame(raf);
+    // A timer, not requestAnimationFrame: it still finishes in a background tab.
+    const id = window.setInterval(step, 40);
+    // Whatever happens, land on the real text.
+    const done = window.setTimeout(() => setShown(text), delay + duration + 150);
+    step();
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(done);
+    };
   }, [text, duration, delay]);
 
   return shown;
