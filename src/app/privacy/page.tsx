@@ -43,7 +43,7 @@ export default function PrivacyPage() {
       <ul className="mt-2 grid list-disc gap-1.5 pl-5">
         <li><strong>See your Google Classroom classes</strong> (classroom.courses.readonly), to know which classes to check.</li>
         <li><strong>See your coursework and its status</strong> (classroom.coursework.me.readonly), to list your assignments, their due dates, and whether you have turned them in.</li>
-        <li><strong>Create and edit events in your calendar</strong> (calendar.events), to put each open assignment&apos;s due date in your Google Calendar with reminders, and to remove it when you finish or delete the task.</li>
+        <li><strong>Make one calendar of its own and manage events in it</strong> (calendar.app.created). Sabaq creates a calendar named &ldquo;Sabaq due dates&rdquo; in your Google Calendar, puts each open assignment&apos;s due date there with reminders, and removes it when you finish or delete the task. Sabaq cannot see or change your other calendars.</li>
         <li>See your Google email address, to show which account is connected.</li>
       </ul>
       <p className="mt-3">

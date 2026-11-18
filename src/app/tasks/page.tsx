@@ -313,7 +313,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
                 </p>
                 <p className="mt-2 text-sm text-ink-soft">
                   {connection.calendar_enabled
-                    ? "Open work with a due date is also in your Google Calendar, with reminders a day and two hours before."
+                    ? "Open work with a due date is also in the \u201cSabaq due dates\u201d calendar in your Google Calendar, with reminders a day and two hours before."
                     : "Calendar is off. Disconnect and connect again, and allow Calendar, to get due dates in your Google Calendar."}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">

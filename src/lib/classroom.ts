@@ -5,7 +5,9 @@ import type { createClient } from "@/lib/supabase/server";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
-export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+// Non-sensitive: lets Sabaq create its own "Sabaq due dates" calendar and
+// manage events in it, without access to the student's other calendars.
+export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
 
 export const CLASSROOM_SCOPES = [
   "openid",
@@ -179,7 +181,7 @@ export async function syncClassroom(supabase: Client, userId: string) {
 
   let events = 0;
   if (connection.calendar_enabled) {
-    events = await pushToCalendar(supabase, userId, token).catch((error) => {
+    events = await pushToCalendar(supabase, userId, token).catch((error: unknown) => {
       console.error("Calendar sync failed", error);
       return 0;
     });
@@ -190,14 +192,18 @@ export async function syncClassroom(supabase: Client, userId: string) {
 
 // ---------- Google Calendar ----------
 
-const CALENDAR = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
-async function calendarCall(token: string, method: string, path: string, body?: unknown) {
-  return fetch(`${CALENDAR}${path}`, {
+function calendarCall(token: string, method: string, path: string, body?: unknown) {
+  return fetch(`${CALENDAR_API}${path}`, {
     method,
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
+}
+
+function eventsPath(calendarId: string, eventId = "") {
+  return `/calendars/${encodeURIComponent(calendarId)}/events${eventId ? `/${encodeURIComponent(eventId)}` : ""}`;
 }
 
 type CalendarTask = {
@@ -246,21 +252,49 @@ function siteUrl() {
   );
 }
 
+type Connection = { refresh_token: string; calendar_enabled: boolean; calendar_id: string | null };
+
+async function loadConnection(supabase: Client, userId: string) {
+  const { data } = await supabase
+    .from("google_connections")
+    .select("refresh_token, calendar_enabled, calendar_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data as Connection | null;
+}
+
+/** Create the student's "Sabaq due dates" calendar and remember its id. */
+async function createSabaqCalendar(supabase: Client, userId: string, token: string) {
+  const response = await calendarCall(token, "POST", "/calendars", {
+    summary: "Sabaq due dates",
+    description: `Assignment due dates from Sabaq (${siteUrl()}/tasks). Sabaq only changes this calendar.`,
+    timeZone: "Asia/Karachi",
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    if (response.status === 403 && /disabled|not been used/i.test(detail)) {
+      throw new Error("The Google Calendar API is not enabled for this site yet.");
+    }
+    throw new Error(`Could not create the Sabaq calendar (${response.status}).`);
+  }
+  const { id } = (await response.json()) as { id: string };
+  await supabase.from("google_connections").update({ calendar_id: id }).eq("user_id", userId);
+  // A new calendar holds none of the old events.
+  await supabase.from("tasks").update({ calendar_event_id: null }).eq("user_id", userId);
+  return id;
+}
+
 /**
- * Mirror the student's tasks into their Google Calendar: open tasks with a
- * future due date get an event (with reminders a day and two hours before);
- * finished or deleted tasks lose theirs.
+ * Mirror the student's tasks into their "Sabaq due dates" calendar: open tasks
+ * with a future due date get an event (with reminders a day and two hours
+ * before); finished or deleted tasks lose theirs.
  */
 export async function pushToCalendar(supabase: Client, userId: string, token?: string) {
-  if (!token) {
-    const { data: connection } = await supabase
-      .from("google_connections")
-      .select("refresh_token, calendar_enabled")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (!connection?.calendar_enabled) return 0;
-    token = await accessTokenFrom(connection.refresh_token);
-  }
+  const connection = await loadConnection(supabase, userId);
+  if (!connection?.calendar_enabled) return 0;
+  token ??= await accessTokenFrom(connection.refresh_token);
+
+  let calendarId = connection.calendar_id ?? (await createSabaqCalendar(supabase, userId, token));
 
   const now = new Date().toISOString();
   const { data: tasks } = await supabase
@@ -273,10 +307,11 @@ export async function pushToCalendar(supabase: Client, userId: string, token?: s
 
   const url = siteUrl();
   let changed = 0;
+  let recreated = false;
   for (const task of (tasks ?? []) as CalendarTask[]) {
     const wanted = !task.done && task.due_at && task.due_at >= now;
     if (!wanted && task.calendar_event_id) {
-      const response = await calendarCall(token, "DELETE", `/${task.calendar_event_id}`);
+      const response = await calendarCall(token, "DELETE", eventsPath(calendarId, task.calendar_event_id));
       if (response.ok || response.status === 404 || response.status === 410) {
         await supabase.from("tasks").update({ calendar_event_id: null }).eq("id", task.id);
         changed++;
@@ -289,20 +324,22 @@ export async function pushToCalendar(supabase: Client, userId: string, token?: s
       const response = await calendarCall(
         token,
         "PATCH",
-        `/${task.calendar_event_id}`,
+        eventsPath(calendarId, task.calendar_event_id),
         eventFor(task, url),
       );
       if (response.ok) continue;
       if (response.status !== 404 && response.status !== 410) continue;
-      // The student deleted the event in Calendar; make a fresh one below.
+      // The student deleted the event; make a fresh one below.
     }
-    const response = await calendarCall(token, "POST", "", eventFor(task, url));
+    let response = await calendarCall(token, "POST", eventsPath(calendarId), eventFor(task, url));
+    if (response.status === 404 && !recreated) {
+      // The student deleted the whole Sabaq calendar; make it again once.
+      recreated = true;
+      calendarId = await createSabaqCalendar(supabase, userId, token);
+      response = await calendarCall(token, "POST", eventsPath(calendarId), eventFor(task, url));
+    }
     if (!response.ok) {
-      const detail = await response.text();
-      if (response.status === 403 && /disabled|not been used/i.test(detail)) {
-        throw new Error("The Google Calendar API is not enabled for this site yet.");
-      }
-      console.error("Calendar insert failed", response.status, detail);
+      console.error("Calendar insert failed", response.status, await response.text());
       continue;
     }
     const event = (await response.json()) as { id: string };
@@ -314,14 +351,10 @@ export async function pushToCalendar(supabase: Client, userId: string, token?: s
 
 /** Remove one event, used when a task is deleted. */
 export async function removeCalendarEvent(supabase: Client, userId: string, eventId: string) {
-  const { data: connection } = await supabase
-    .from("google_connections")
-    .select("refresh_token, calendar_enabled")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!connection?.calendar_enabled) return;
+  const connection = await loadConnection(supabase, userId);
+  if (!connection?.calendar_enabled || !connection.calendar_id) return;
   const token = await accessTokenFrom(connection.refresh_token);
-  await calendarCall(token, "DELETE", `/${eventId}`);
+  await calendarCall(token, "DELETE", eventsPath(connection.calendar_id, eventId));
 }
 
 export async function revokeGoogle(refreshToken: string) {
