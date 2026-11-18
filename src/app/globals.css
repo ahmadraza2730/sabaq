@@ -197,3 +197,135 @@ html.dark {
   --code-function: #9cc0ff;
   --code-select: #26406a;
 }
+
+/* ---------- Motion ---------- */
+/* Everything below only runs when the device has not asked for reduced motion. */
+
+@keyframes hi-draw {
+  from { background-size: 0% 100%; }
+  to { background-size: 100% 100%; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes type-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes draw-stroke {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pen-path {
+  0% { transform: translate(260px, 60px) rotate(0deg); opacity: 0; }
+  6% { opacity: 1; }
+  20% { transform: translate(300px, 80px) rotate(-4deg); }
+  40% { transform: translate(290px, 140px) rotate(3deg); }
+  60% { transform: translate(250px, 230px) rotate(-2deg); }
+  78% { transform: translate(350px, 236px) rotate(2deg); }
+  92% { transform: translate(330px, 240px) rotate(0deg); opacity: 1; }
+  100% { transform: translate(340px, 250px) rotate(0deg); opacity: 0; }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+}
+@keyframes word-in {
+  from { opacity: 0; transform: translateY(0.45em); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes shimmer-line {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.word-cycle-item {
+  grid-area: 1 / 1;
+  visibility: hidden;
+}
+.word-cycle-item[data-on] {
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The highlighter is swiped on, left to right. */
+  .hi {
+    background-repeat: no-repeat;
+    animation: hi-draw 0.9s 0.25s cubic-bezier(0.6, 0, 0.2, 1) both;
+  }
+
+  .word-cycle-item[data-on] {
+    animation: word-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  /* Sections rise in once, children one after another. */
+  .reveal > * {
+    opacity: 0;
+  }
+  .reveal[data-shown] > * {
+    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .reveal[data-shown] > *:nth-child(2) { animation-delay: 0.07s; }
+  .reveal[data-shown] > *:nth-child(3) { animation-delay: 0.14s; }
+  .reveal[data-shown] > *:nth-child(4) { animation-delay: 0.21s; }
+  .reveal[data-shown] > *:nth-child(5) { animation-delay: 0.28s; }
+  .reveal[data-shown] > *:nth-child(6) { animation-delay: 0.35s; }
+  .reveal[data-shown] > *:nth-child(n + 7) { animation-delay: 0.42s; }
+
+  /* Hero art: the page writes itself. */
+  .hero-art { animation: bob 7s 5.5s ease-in-out infinite; }
+  .hero-art .art-hi {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: shimmer-line 0.7s 0.2s cubic-bezier(0.6, 0, 0.2, 1) both;
+  }
+  .hero-art .art-type { animation: type-in 0.6s 0.35s steps(15) both; }
+  .hero-art .art-line { animation: type-in 0.55s var(--d, 0s) steps(22) both; }
+  .hero-art .art-draw {
+    stroke-dasharray: 1;
+    animation: draw-stroke 0.6s var(--d, 0s) ease-out both;
+  }
+  .hero-art .art-pen { animation: pen-path 5.2s 0.3s ease-in-out both; }
+
+  /* Small responses to touch and hover. */
+  .btn {
+    transition: transform 0.12s ease, opacity 0.15s ease, background-color 0.15s ease;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .line {
+    transition: background-color 0.2s ease;
+  }
+  a.lift, .lift {
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 -2px var(--color-rule);
+  }
+  .field {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink) 14%, transparent);
+}
+
+/* A ruled line under a link that draws in on hover. */
+.ink-link {
+  background: linear-gradient(var(--color-margin), var(--color-margin)) no-repeat left bottom / 0% 2px;
+  transition: background-size 0.25s ease;
+}
+.ink-link:hover {
+  background-size: 100% 2px;
+}
+
+.hero-art .art-pen { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-art .art-pen { display: none; }
+}

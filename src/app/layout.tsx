@@ -88,8 +88,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     href={link.href}
                     className={
                       link.href === "/tasks" && dueSoon > 0
-                        ? "font-semibold text-margin hover:underline"
-                        : "hover:underline"
+                        ? "ink-link font-semibold text-margin"
+                        : "ink-link"
                     }
                   >
                     {link.label}

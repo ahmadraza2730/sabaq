@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { HeroArt } from "@/components/HeroArt";
+import { Reveal } from "@/components/Reveal";
 import { RoadmapGrid } from "@/components/Roadmap";
+import { WordCycle } from "@/components/WordCycle";
 import { DEFAULT_UNIVERSITY } from "@/lib/config";
 import {
   countDueSoon,
@@ -113,11 +116,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </div>
       )}
 
-      <section className="grid gap-10 pb-14 pt-10 sm:pt-16 lg:grid-cols-[1.35fr_1fr] lg:items-end">
+      <section className="grid gap-10 pb-10 pt-10 sm:pt-16 lg:grid-cols-[1.25fr_1fr] lg:items-center">
         <div>
           <h1 className="font-display text-4xl font-extrabold leading-[1.04] tracking-tight sm:text-6xl">
-            <span className="hi">FAST notes, past papers and answers,</span>{" "}
-            sorted by course.
+            FAST{" "}
+            <span className="hi">
+              <WordCycle words={["notes", "past papers", "slides", "lab tasks", "answers"]} />
+            </span>
+            , sorted by course.
           </h1>
           <p className="mt-5 max-w-xl text-lg text-ink-soft">
             Built for FAST-NUCES students in BS CS, SE, AI, DS and Cyber
@@ -160,20 +166,20 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </nav>
         </div>
 
-        <ol className="sheet">
-          {STEPS.map((step, i) => (
-            <li key={step.title} className="line">
-              <span className="in-margin font-display text-2xl font-extrabold text-margin">
-                {i + 1}
-              </span>
-              <span>
-                <span className="block font-semibold">{step.title}</span>
-                <span className="block text-sm text-ink-soft">{step.text}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div className="mx-auto w-full max-w-md lg:max-w-none">
+          <HeroArt />
+        </div>
       </section>
+
+      <Reveal as="ol" className="grid gap-3 pb-14 sm:grid-cols-3">
+        {STEPS.map((step, i) => (
+          <li key={step.title} className="lift sheet sheet-tight p-5 pl-7">
+            <span className="font-display text-3xl font-extrabold text-margin">{i + 1}</span>
+            <span className="mt-1 block font-semibold">{step.title}</span>
+            <span className="mt-1 block text-sm text-ink-soft">{step.text}</span>
+          </li>
+        ))}
+      </Reveal>
 
       <section className="pb-14">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -211,38 +217,36 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             </Link>
           ))}
         </nav>
-        <RoadmapGrid
-          courses={roadmapCourses}
-          slots={slots}
-          universitySlug={DEFAULT_UNIVERSITY}
-        />
+        <Reveal>
+          <RoadmapGrid
+            courses={roadmapCourses}
+            slots={slots}
+            universitySlug={DEFAULT_UNIVERSITY}
+          />
+        </Reveal>
       </section>
 
       <section className="pb-14">
         <h2 className="mb-5 font-display text-2xl font-bold sm:text-3xl">
-          On every course page
+          Everything a FAST semester needs
         </h2>
-        <ul className="sheet">
+        <Reveal as="ul" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {TOOLS.map((tool) => (
-            <li key={tool.label} className="line">
-              <span className="in-margin text-sm font-semibold text-ink-soft">
-                {tool.label}
+            <li key={tool.label} className="lift sheet sheet-tight relative p-5 pl-7 hover:border-ink">
+              <span className="text-xs font-bold text-margin">{tool.label}</span>
+              <span className="mt-1 block font-display text-lg font-bold leading-snug">
+                {tool.href ? (
+                  <Link href={tool.href} className="after:absolute after:inset-0 after:content-['']">
+                    {tool.title}
+                  </Link>
+                ) : (
+                  tool.title
+                )}
               </span>
-              <span>
-                <span className="block font-semibold">
-                  {tool.href ? (
-                    <Link href={tool.href} className="hover:underline">
-                      {tool.title}
-                    </Link>
-                  ) : (
-                    tool.title
-                  )}
-                </span>
-                <span className="block text-sm text-ink-soft">{tool.text}</span>
-              </span>
+              <span className="mt-1 block text-sm text-ink-soft">{tool.text}</span>
             </li>
           ))}
-        </ul>
+        </Reveal>
       </section>
 
     </>
