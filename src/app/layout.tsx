@@ -10,6 +10,7 @@ import { AUTHOR_GITHUB, AUTHOR_LINKEDIN, isConfigured } from "@/lib/config";
 import { countDueSoon } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import "./globals.css";
+import { SiteBackdrop } from "@/components/SiteBackdrop";
 
 export const metadata: Metadata = {
   title: {
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col">
+        <SiteBackdrop />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded focus:bg-sheet focus:px-3 focus:py-2"
@@ -74,7 +76,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </p>
         )}
 
-        <header className="sticky top-0 z-40 border-b border-rule bg-sheet">
+        <header className="sticky top-0 z-40 border-b border-rule bg-sheet/80 backdrop-blur-md">
           <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
             <Logo />
             <div className="flex items-center gap-2 md:gap-5">

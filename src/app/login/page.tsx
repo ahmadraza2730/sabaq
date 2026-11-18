@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signIn, signUp } from "@/app/actions";
 import { Reveal } from "@/components/Reveal";
-import { StudyBackdrop } from "@/components/StudyBackdrop";
+import { Scramble } from "@/components/Scramble";
 import { WordCycle } from "@/components/WordCycle";
 import { getSession } from "@/lib/supabase/server";
 
@@ -28,19 +28,14 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <>
-      {/* The living notebook page behind everything, with a soft wash so the form stays easy to read. */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
-        <StudyBackdrop />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,color-mix(in_srgb,var(--color-sheet)_85%,transparent)_0%,transparent_60%),radial-gradient(ellipse_at_22%_45%,color-mix(in_srgb,var(--color-sheet)_80%,transparent)_0%,transparent_55%)]" />
-        <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--color-sheet)_25%,transparent)]" />
-      </div>
-
       <div className="grid min-h-[calc(100dvh-9rem)] items-center gap-10 py-10 lg:grid-cols-[1.1fr_1fr]">
         <Reveal className="hidden lg:block">
           <p className="font-display text-sm font-bold text-margin">Sabaq, for FAST-NUCES</p>
           <h2 className="mt-3 font-display text-5xl font-extrabold leading-[1.02] tracking-tight">
-            Your semester,{" "}
-            <span className="hi">already half written.</span>
+            <Scramble text="Your semester," />{" "}
+            <span className="hi">
+              <Scramble text="already half written." delay={250} />
+            </span>
           </h2>
           <p className="mt-5 max-w-md text-lg text-ink-soft">
             Your seniors&apos; <WordCycle words={["notes", "past papers", "slides", "solved labs"]} />,
@@ -66,7 +61,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <Reveal className="mx-auto w-full max-w-md">
           <div className="sheet sheet-tight p-6 pl-8 shadow-[0_18px_50px_-20px_color-mix(in_srgb,var(--color-ink)_35%,transparent)] sm:p-8 sm:pl-10">
             <h1 className="font-display text-3xl font-extrabold tracking-tight">
-              {mode === "signup" ? "Create your account" : "Welcome back"}
+              <Scramble text={mode === "signup" ? "Create your account" : "Welcome back"} delay={150} />
             </h1>
             <p className="mt-2 text-ink-soft">
               {mode === "signup"

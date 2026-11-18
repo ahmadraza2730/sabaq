@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useScramble } from "@/components/Scramble";
 
 /**
  * Cycles through words in one spot. The box eases to each word's width, so
@@ -10,6 +11,7 @@ export function WordCycle({ words, interval = 2200 }: { words: string[]; interva
   const [index, setIndex] = useState(0);
   const [width, setWidth] = useState<number | null>(null);
   const items = useRef<(HTMLSpanElement | null)[]>([]);
+  const decoded = useScramble(words[index], 650);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -34,7 +36,7 @@ export function WordCycle({ words, interval = 2200 }: { words: string[]; interva
       <span className="sr-only">{words.join(", ")}</span>
       <span
         aria-hidden="true"
-        className="word-cycle-box"
+        className="word-cycle-box relative"
         style={width === null ? undefined : { width }}
       >
         {words.map((word, i) => (
@@ -43,12 +45,12 @@ export function WordCycle({ words, interval = 2200 }: { words: string[]; interva
             ref={(el) => {
               items.current[i] = el;
             }}
-            data-on={i === index ? "" : undefined}
             className="word-cycle-item"
           >
             {word}
           </span>
         ))}
+        <span className="word-cycle-live absolute left-0 top-0 whitespace-nowrap">{decoded}</span>
       </span>
     </span>
   );

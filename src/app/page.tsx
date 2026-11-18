@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HeroArt } from "@/components/HeroArt";
 import { Reveal } from "@/components/Reveal";
+import { Scramble } from "@/components/Scramble";
 import { RoadmapGrid } from "@/components/Roadmap";
 import { WordCycle } from "@/components/WordCycle";
 import { DEFAULT_UNIVERSITY } from "@/lib/config";
@@ -123,7 +124,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <span className="hi">
               <WordCycle words={["notes", "past papers", "slides", "lab tasks", "answers"]} />
             </span>
-            , sorted by course.
+            <Scramble text=", sorted by course." delay={200} />
           </h1>
           <p className="mt-5 max-w-xl text-lg text-ink-soft">
             Built for FAST-NUCES students in BS CS, SE, AI, DS and Cyber
