@@ -9,7 +9,7 @@ import { indexResource } from "@/lib/indexing";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { isResourceType, isTeamKind } from "@/lib/types";
 import { isProgram, parseRollNumber } from "@/lib/fast";
-import { revokeGoogle, syncClassroom } from "@/lib/classroom";
+import { pushToCalendar, removeCalendarEvent, revokeGoogle, syncClassroom } from "@/lib/classroom";
 
 /** Only allow redirects back into this site. */
 function safeNext(value: FormDataEntryValue | null) {
@@ -575,34 +575,46 @@ export async function addTask(formData: FormData) {
     due_at: dueAt?.toISOString() ?? null,
   });
   if (error) back("/tasks", `Could not add the task: ${error.message}`);
+  await pushToCalendar(supabase, session.userId).catch(() => 0);
   revalidatePath("/", "layout");
 }
 
 export async function setTaskDone(taskId: string, done: boolean) {
-  await requireSession("/tasks");
+  const session = await requireSession("/tasks");
   const supabase = await createClient();
   await supabase.from("tasks").update({ done }).eq("id", taskId);
+  await pushToCalendar(supabase, session.userId).catch(() => 0);
   revalidatePath("/", "layout");
 }
 
 export async function deleteTask(taskId: string) {
-  await requireSession("/tasks");
+  const session = await requireSession("/tasks");
   const supabase = await createClient();
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("calendar_event_id")
+    .eq("id", taskId)
+    .maybeSingle();
   await supabase.from("tasks").delete().eq("id", taskId).eq("source", "manual");
+  if (task?.calendar_event_id) {
+    await removeCalendarEvent(supabase, session.userId, task.calendar_event_id).catch(
+      () => undefined,
+    );
+  }
   revalidatePath("/", "layout");
 }
 
 export async function syncClassroomNow() {
   const session = await requireSession("/tasks");
   const supabase = await createClient();
-  let result: { items: number; courses: number };
+  let result: { items: number; courses: number; events: number };
   try {
     result = await syncClassroom(supabase, session.userId);
   } catch (error) {
     back("/tasks", error instanceof Error ? error.message : "Sync failed.");
   }
   revalidatePath("/", "layout");
-  redirect(`/tasks?synced=${result.items}&courses=${result.courses}`);
+  redirect(`/tasks?synced=${result.items}&courses=${result.courses}&events=${result.events}`);
 }
 
 export async function disconnectClassroom() {

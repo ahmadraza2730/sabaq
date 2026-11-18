@@ -39,6 +39,12 @@ const TOOLS = [
     text: "Ask about a lecture, an assignment or a past paper and get answers from students who took it.",
   },
   {
+    label: "Practice",
+    title: "Coding practice with a built-in compiler",
+    text: "PF, OOP and DSA problems in the style of LeetCode. Write C++ or Java in the browser, run it, and submit against hidden tests.",
+    href: "/practice",
+  },
+  {
     label: "Assistant",
     title: "FAST study assistant",
     text: "Ask about any course in English or Roman Urdu. It cites the uploaded notes when they cover it and explains from general knowledge when they do not.",
@@ -47,7 +53,7 @@ const TOOLS = [
   {
     label: "My work",
     title: "Assignments and reminders",
-    text: "Connect Google Classroom to pull in what is due and what you have not turned in, or add your own reminders.",
+    text: "Connect Google Classroom to pull in what is due and what you have not turned in, get due dates in Google Calendar, or add your own reminders.",
     href: "/tasks",
   },
   {

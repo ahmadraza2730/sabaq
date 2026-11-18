@@ -35,12 +35,13 @@ export async function GET(request: NextRequest) {
       google_email: tokens.email,
       refresh_token: tokens.refreshToken,
       connected_at: new Date().toISOString(),
+      calendar_enabled: tokens.calendar,
     });
     if (error) return fail(`Could not save the connection: ${error.message}`);
 
     const result = await syncClassroom(supabase, session.userId);
     return NextResponse.redirect(
-      `${origin}/tasks?synced=${result.items}&courses=${result.courses}`,
+      `${origin}/tasks?synced=${result.items}&courses=${result.courses}&events=${result.events}`,
     );
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Connecting Classroom failed.");

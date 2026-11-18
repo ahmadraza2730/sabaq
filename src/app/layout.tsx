@@ -39,6 +39,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   const links = [
     { href: "/u/fast-nuces", label: "Courses" },
+    { href: "/practice", label: "Practice" },
     { href: "/assistant", label: "Assistant" },
     {
       href: "/tasks",
@@ -129,6 +130,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <p className="font-semibold">Browse</p>
               <Link href="/u/fast-nuces" className="text-ink-soft hover:text-ink hover:underline">
                 FAST-NUCES courses
+              </Link>
+              <Link href="/practice" className="text-ink-soft hover:text-ink hover:underline">
+                Coding practice
+              </Link>
+              <Link href="/compiler" className="text-ink-soft hover:text-ink hover:underline">
+                C++ and Java compiler
               </Link>
               <Link href="/assistant" className="text-ink-soft hover:text-ink hover:underline">
                 Study assistant

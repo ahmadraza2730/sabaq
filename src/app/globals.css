@@ -173,3 +173,27 @@ body {
     scroll-behavior: smooth;
   }
 }
+
+/* Code editor: ink colors that read on both the day and the night page. */
+:root {
+  --code-bg: #fbfcfe;
+  --code-gutter: #eef2f7;
+  --code-keyword: #8a2be2;
+  --code-type: #0b6e8a;
+  --code-string: #1c7c4e;
+  --code-number: #b4530a;
+  --code-comment: #7a8699;
+  --code-function: #1d4ed8;
+  --code-select: #d7e3f6;
+}
+html.dark {
+  --code-bg: #0f1829;
+  --code-gutter: #131e33;
+  --code-keyword: #d3a6ff;
+  --code-type: #7fd3ea;
+  --code-string: #8fe0b2;
+  --code-number: #ffb77a;
+  --code-comment: #7e8ea8;
+  --code-function: #9cc0ff;
+  --code-select: #26406a;
+}

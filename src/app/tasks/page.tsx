@@ -184,6 +184,8 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
         <p role="status" className="my-4 rounded bg-hi p-3 text-sm font-medium">
           Synced {synced} {synced === "1" ? "item" : "items"} from{" "}
           {one(query.courses)} Classroom {one(query.courses) === "1" ? "class" : "classes"}.
+          {Number(one(query.events) ?? 0) > 0 &&
+            ` Updated ${one(query.events)} Google Calendar ${one(query.events) === "1" ? "event" : "events"}.`}
         </p>
       )}
 
@@ -292,7 +294,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
           </section>
 
           <section className="sheet sheet-tight p-5 pl-6">
-            <h2 className="font-display text-lg font-bold">Google Classroom</h2>
+            <h2 className="font-display text-lg font-bold">Google Classroom and Calendar</h2>
             {!classroomReady ? (
               <p className="mt-2 text-sm text-ink-soft">
                 Classroom sync is not set up on this site yet.
@@ -309,6 +311,11 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
                     ? `Last synced ${formatDue(connection.last_synced_at)}.`
                     : "Not synced yet."}
                 </p>
+                <p className="mt-2 text-sm text-ink-soft">
+                  {connection.calendar_enabled
+                    ? "Open work with a due date is also in your Google Calendar, with reminders a day and two hours before."
+                    : "Calendar is off. Disconnect and connect again, and allow Calendar, to get due dates in your Google Calendar."}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <form action={syncClassroomNow}>
                     <button className="btn">Sync now</button>
@@ -321,9 +328,10 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
             ) : (
               <>
                 <p className="mt-2 text-sm text-ink-soft">
-                  Pull your classes&apos; assignments and due dates in, and
-                  see which you have not turned in. Read-only: Sabaq never
-                  submits or changes anything.
+                  Pull your classes&apos; assignments and due dates in, see
+                  which you have not turned in, and get each due date in your
+                  Google Calendar with reminders. Sabaq never submits or
+                  changes anything in Classroom.
                 </p>
                 <a href="/api/google/connect" className="btn mt-3">
                   Connect Google Classroom

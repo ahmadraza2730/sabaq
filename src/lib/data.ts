@@ -239,10 +239,15 @@ export async function getGoogleConnection(userId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("google_connections")
-    .select("google_email, connected_at, last_synced_at")
+    .select("google_email, connected_at, last_synced_at, calendar_enabled")
     .eq("user_id", userId)
     .maybeSingle();
-  return data as { google_email: string | null; connected_at: string; last_synced_at: string | null } | null;
+  return data as {
+    google_email: string | null;
+    connected_at: string;
+    last_synced_at: string | null;
+    calendar_enabled: boolean;
+  } | null;
 }
 
 // ---------- Files ----------
