@@ -240,9 +240,16 @@ html.dark {
   to { transform: scaleX(1); }
 }
 
+.word-cycle-box {
+  display: inline-grid;
+  justify-items: start;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
 .word-cycle-item {
   grid-area: 1 / 1;
   visibility: hidden;
+  white-space: nowrap;
 }
 .word-cycle-item[data-on] {
   visibility: visible;
@@ -257,6 +264,9 @@ html.dark {
 
   .word-cycle-item[data-on] {
     animation: word-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .word-cycle-box {
+    transition: width 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
   }
 
   /* Sections rise in once, children one after another. */

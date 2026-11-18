@@ -31,7 +31,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       {/* The living notebook page behind everything, with a soft wash so the form stays easy to read. */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
         <StudyBackdrop />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_45%,color-mix(in_srgb,var(--color-paper)_82%,transparent)_0%,color-mix(in_srgb,var(--color-paper)_35%,transparent)_55%,transparent_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,color-mix(in_srgb,var(--color-sheet)_85%,transparent)_0%,transparent_60%),radial-gradient(ellipse_at_22%_45%,color-mix(in_srgb,var(--color-sheet)_80%,transparent)_0%,transparent_55%)]" />
+        <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--color-sheet)_25%,transparent)]" />
       </div>
 
       <div className="grid min-h-[calc(100dvh-9rem)] items-center gap-10 py-10 lg:grid-cols-[1.1fr_1fr]">
