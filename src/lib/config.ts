@@ -22,3 +22,5 @@ export const ALLOWED_EXTENSIONS = [
 /** Shown in the footer next to "Made by". Leave empty to hide. */
 export const AUTHOR_LINKEDIN = process.env.NEXT_PUBLIC_AUTHOR_LINKEDIN ?? "";
 export const AUTHOR_GITHUB = "https://github.com/ahmadraza2730";
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "ahmad2730000@gmail.com";
+export const SITE_NAME = "Sabaq";

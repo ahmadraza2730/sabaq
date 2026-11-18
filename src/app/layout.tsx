@@ -161,6 +161,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/profile" className="text-ink-soft hover:text-ink hover:underline">
                 Your profile
               </Link>
+              <Link href="/privacy" className="text-ink-soft hover:text-ink hover:underline">
+                Privacy policy
+              </Link>
+              <Link href="/terms" className="text-ink-soft hover:text-ink hover:underline">
+                Terms of use
+              </Link>
             </nav>
           </div>
           <div className="border-t border-rule">

@@ -336,6 +336,13 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
                 <a href="/api/google/connect" className="btn mt-3">
                   Connect Google Classroom
                 </a>
+                <p className="mt-2 text-xs text-ink-soft">
+                  See what Sabaq reads and stores in the{" "}
+                  <Link href="/privacy" className="underline">
+                    privacy policy
+                  </Link>
+                  .
+                </p>
               </>
             )}
           </section>
